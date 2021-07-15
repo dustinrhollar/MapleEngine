@@ -6,14 +6,14 @@ Maple terrain is an in-development terrain editor whose focus is on providing a 
 
 ## Compiling
 
-Maple Terrain only supports Windows with D3D12 support. This application has the following dependencies that will have to be setup on the user's machine before compiling this application:
-1. A version of at least Visual Studio 10 installed in order to use the `cl` command line suite of tools. The setup script for initializing these tools can be found in `scripts/setup_cl.bat`. You will only need to run this file yourself if the your path to Visual Studio is differnt than mine. 
+Maple Terrain only supports Windows with D3D12. This application has the following dependencies that will have to be setup on the user's machine before compiling this application:
+1. A version of at least Visual Studio 10 installed in order to use the `cl` command line suite of tools. The setup script for initializing these tools can be found in `scripts/setup_cl.bat`. You will only need to run this file if the your path to Visual Studio is differnt than mine. 
 2. CMAKE for compiling IMGUI
 3. [FXC](https://docs.microsoft.com/en-us/windows/win32/direct3dtools/fxc) for compiling shaders. 
 
 All other dependencies are located in the `Editor/Ext` and are compiled automatically with the build system. 
 
-Open your prefered command terminal, and navigate to the cloned repository.
+Open your preferred command terminal, and navigate to the cloned repository.
 ```c
 // Compile IMGUI
 cd scripts && build_imgui.bat && cd ..
@@ -31,9 +31,10 @@ run.bat
 ## Active Task List
 - [x] Base Rendering Architecture
 - [x] ImGui Platform & Rendering Layer
-- [x] Basic Editor supporting Node Graph and Terrain Generation 
+- [x] Basic Editor supporting Node Graph and Terrain Generation
+- [x] Viewport Camera controls
 - [x] Triangle Strip based mesh generation
-- [ ] Alternative mesh generation approaches (Low poly, TIN) 
+- [ ] Alternative mesh generation approaches (Low poly, Geo Clipping, TIN) 
 - [x] Compute support for Perlin and Simplex noise algorithms
 - [ ] Compute support for other noise algorithms (Worley, Turbulence, etc.)
 - [x] Experimental Window for graphics testing
@@ -44,4 +45,4 @@ run.bat
 
 ## Showcase
 
-![Showoff](https://gfycat.com/idealisticwellwornbeauceron)
+
