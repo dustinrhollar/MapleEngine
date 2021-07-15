@@ -1,0 +1,64 @@
+version(1);
+project_name = "Maple";
+patterns = {
+"*.c",
+"*.cpp",
+"*.h",
+"*.m",
+"*.bat",
+"*.sh",
+"*.4coder",
+"*.hlsl",
+};
+blacklist_patterns = {
+".*",
+};
+load_paths_base = {
+ { ".", .relative = true, .recursive = true, },
+};
+load_paths = {
+ { load_paths_base, .os = "win", },
+ { load_paths_base, .os = "linux", },
+ { load_paths_base, .os = "mac", },
+};
+
+command_list = {
+ { .name = "build_editor",
+   .out = "*compilation*", .footer_panel = true, .save_dirty_files = true,
+   .cmd = { { "build_editor.bat" , .os = "win"   },
+            { "./build.sh", .os = "linux" },
+            { "./build.sh", .os = "mac"   }, }, },
+ { .name = "build_engine",
+   .out = "*compilation*", .footer_panel = true, .save_dirty_files = true,
+   .cmd = { { "build_engine.bat" , .os = "win"   },
+            { "./build.sh", .os = "linux" },
+            { "./build.sh", .os = "mac"   }, }, },
+ { .name = "build_renderer",
+   .out = "*compilation*", .footer_panel = true, .save_dirty_files = true,
+   .cmd = { { "build_renderer.bat" , .os = "win"   },
+            { "./build.sh", .os = "linux" },
+            { "./build.sh", .os = "mac"   }, }, },
+ { .name = "run",
+   .out = "*run*", .footer_panel = false, .save_dirty_files = false,
+   .cmd = { { "run.bat",       .os = "win"   },
+            { "bin\debug/MapleTerrain.exe" , .os = "linux" },
+            { "bin\debug/MapleTerrain.exe" , .os = "mac"   }, }, },
+ { .name = "debug",
+   .out = "*run*", .footer_panel = false, .save_dirty_files = false,
+   .cmd = { { "debug.bat"                  , .os = "win"   },
+            { "bin\debug/MapleTerrain.exe" , .os = "linux" },
+            { "bin\debug/MapleTerrain.exe" , .os = "mac"   }, }, },
+ { .name = "shaders",
+   .out = "*run*", .footer_panel = false, .save_dirty_files = false,
+   .cmd = { { "build_shaders.bat"          , .os = "win"   },
+            { "bin\debug/MapleTerrain.exe" , .os = "linux" },
+            { "bin\debug/MapleTerrain.exe" , .os = "mac"   }, }, },
+};
+fkey_command[1] = "build_editor";
+fkey_command[2] = "build_engine";
+fkey_command[3] = "build_renderer";
+fkey_command[5] = "run";
+fkey_command[6] = "debug";
+
+fkey_command[5] = "shaders";
+

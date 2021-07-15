@@ -1,0 +1,74 @@
+Part 1. General Schedule for Basic Infrastructure:
+// At the end of this section, I should be able to
+// load or create a new project, add/remove scenes,
+// add/remove entities, serialize scenes, hotreload
+// files & directories, and a working asset system.
+- Project Structure
+	- Editor exe as entry point
+	- Engine as lib/dll
+- Memory Management
+	- Core Allocator
+	- String arena (page allocator)
+- Basic Graphics & ImGui Setup
+	- Basic Docking
+	- Render into game panel
+- File Manager
+	- Files
+	- File Mounts
+	- Directory Watcher (File hotreloading)
+- Asset Window + File Dialog
+- Startup Window -> Engine Window
+- Load vs. Create Project
+	- Project/Game Generation
+- Serialization (JSON vs Binary)
+	- JSON type serailizer - floating point
+	- Engine core settings file
+	- Project Templates
+	- Known Projects
+	- UI state
+	- Scene + Entity Serialization
+- Entities & Components
+- UI Transactions (Undo/Redo)
+- Assets System
+	- Meta Files (GUID, virtual name, version)
+	- Scene Serialization should save now GUID instead of filename
+
+Part 2. General Schedule for Basic Graphics Infrastructure:
+// At the end of this section, I should have a robust
+// descriptor system that manages data that has to be updated
+// to the GPU. Should be able to draw assets with textures.
+- Textures
+	- Mip generation
+- Assets
+	- Asset Loaded
+	- Asset Pruner/Converter
+	- Command List Bundle submission
+
+Part 3. A Better GUI
+- Reworking IMGUI Theme
+- Prototype a model window
+- Prototype a material window
+
+Part 4. Game Scripting
+- Add scripting as a component
+- Game Build System
+
+Part 5. Writing Demos
+- Basic Lighting
+- Shadows
+- Normal Mapping
+- Bump Mapping
+- Particles
+
+Part 6. Iterating on GUI
+- Different Views for Rendering (i.e. Albedo, Lighting, etc.)
+
+Part 7. Custom Render Graph
+- Prototype script language to generate C++ code for a render graph
+- Prototype visual scripting for this language for direct compilation?
+- Rework demos from Part 5 to use the custom render graph
+
+Part 8. Rendering Optimization
+- Frustum Culling
+- Occlusion Culling
+- Hardware Occlusion Culling
