@@ -602,19 +602,19 @@ editor::Render()
                     
                     // we now dock our windows into the docking node we made above
                     //ImGui::DockBuilderDockWindow("Viewport", dockspace_id);
-                    ImGui::DockBuilderDockWindow("Scene", dock_id_left);
-                    ImGui::DockBuilderDockWindow("Content Browser", dock_id_down);
+                    ImGui::DockBuilderDockWindow("Experimental Scene", dock_id_left);
+                    ImGui::DockBuilderDockWindow("Experimental Content Browser", dock_id_down);
                     ImGui::DockBuilderDockWindow("Experimental Viewport", dockspace_id);
                     
                     ImGui::DockBuilderFinish(dockspace_id);
                 }
                 
                 
-                ImGui::Begin("Scene");
+                ImGui::Begin("Experimental Scene");
                 //experimental::DrawScene();
                 ImGui::End();
                 
-                ImGui::Begin("Content Browser");
+                ImGui::Begin("Experimental Content Browser");
                 //experimental::DrawContentBrowser();
                 ImGui::End();
                 
@@ -804,16 +804,12 @@ editor::Render()
                 
                 ImGui::Begin("Settings");
                 ImGui::Text("Hello, settings!");
-                
                 ImGui::Value("Viewport \"Settings\" ID: ", ImGui::GetWindowViewport()->ID);
-                
                 ImGui::End();
                 
                 ImGui::Begin("Console");
                 ImGui::Text("Hello, console!");
-                
                 ImGui::Value("Viewport \"Console\" ID: ", ImGui::GetWindowViewport()->ID);
-                
                 ImGui::End();
                 
                 DrawTerrainGraph();
