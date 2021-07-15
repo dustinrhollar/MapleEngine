@@ -45,4 +45,12 @@ run.bat
 
 ## Showcase
 
+### Primary Viewport for Terrain
+![Main](https://github.com/dustinrhollar/MapleTerrain/blob/main/data/showcase/main_viewport.PNG)
 
+### Secondary Viewport for Terrain Generation
+![Secondary](https://github.com/dustinrhollar/MapleTerrain/blob/main/data/showcase/node_editor.PNG)
+
+### Experimental Viewport for testing new graphics features 
+
+![Experimental](https://github.com/dustinrhollar/MapleTerrain/blob/main/data/showcase/experimental_editor.PNG)
