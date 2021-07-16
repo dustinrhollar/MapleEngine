@@ -103,15 +103,15 @@ namespace editor
                 // -y moves backward
                 // +x turn right
                 // -x turn left
-                _yaw -= xoffset;
-                UpdateCameraVectors();
-                
+                _yaw += xoffset;
                 _position = v3_sub(_position, v3_mulf(_front, yoffset));
+                
+                UpdateCameraVectors();
             }
             else if (rmb_press)
             {
-                _yaw   -= xoffset;
-                _pitch += yoffset; // @FIXME: Figure out delta y doesn't work w/out a boost!
+                _yaw   += xoffset;
+                _pitch += yoffset;
                 // make sure that when pitch is out of bounds, screen doesn't get flipped
                 //if (false /*constrain_pitch*/)
                 {
@@ -121,20 +121,20 @@ namespace editor
                         _pitch = -89.0f;
                 }
                 
-                UpdateCameraVectors();
-                
                 if ((_key_press_mask & BIT(KeyMask_W)))
                     _position = v3_add(_position, v3_mulf(_front, velocity));
                 if ((_key_press_mask & BIT(KeyMask_S)))
                     _position = v3_sub(_position, v3_mulf(_front, velocity));
                 if ((_key_press_mask & BIT(KeyMask_A)))
-                    _position = v3_add(_position, v3_mulf(_right, velocity));
-                if ((_key_press_mask & BIT(KeyMask_D)))
                     _position = v3_sub(_position, v3_mulf(_right, velocity));
+                if ((_key_press_mask & BIT(KeyMask_D)))
+                    _position = v3_add(_position, v3_mulf(_right, velocity));
                 if ((_key_press_mask & BIT(KeyMask_Q)))
                     _position = v3_sub(_position, v3_mulf(_up, velocity));
                 if ((_key_press_mask & BIT(KeyMask_E)))
                     _position = v3_add(_position, v3_mulf(_up, velocity));
+                
+                UpdateCameraVectors();
             }
         }
         

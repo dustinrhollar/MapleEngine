@@ -1,4 +1,7 @@
 
+//-----------------------------------------------------------------------------------------------//
+// Generate Mips PSO Implementation
+
 void CommandList::GenerateMipsPSO::Init()
 {
     ID3D12Device *d3d_device = device::GetDevice();
@@ -54,6 +57,69 @@ void CommandList::GenerateMipsPSO::Free()
     _pipeline_state.Free();
 }
 
+//-----------------------------------------------------------------------------------------------//
+// PanoToCubemap Implementation
+
+void CommandList::PanoToCubemap_PSO::Init()
+{
+    ID3D12Device *d3d_device = device::GetDevice();
+    
+    D3D12_DESCRIPTOR_RANGE1 srcMip = d3d::GetDescriptorRange1(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0,
+                                                              D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+    D3D12_DESCRIPTOR_RANGE1 outMip = d3d::GetDescriptorRange1(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 5, 0, 0,
+                                                              D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+    
+    D3D12_ROOT_PARAMETER1 rootParameters[PanoToCubemap_RS::Num_RS];
+    rootParameters[PanoToCubemap_RS::PanoToCubemap_CB] = d3d::root_param1::InitAsConstant(sizeof(PanoToCubemap_CB) / 4, 0);
+    rootParameters[PanoToCubemap_RS::SrcTexture] = d3d::root_param1::InitAsDescriptorTable(1, &srcMip);
+    rootParameters[PanoToCubemap_RS::DstTexture] = d3d::root_param1::InitAsDescriptorTable(1, &outMip);
+    
+    D3D12_STATIC_SAMPLER_DESC linearClampSampler = d3d::GetStaticSamplerDesc( 0, D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+                                                                             D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                                                                             D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+    
+    _root_signature = {};
+    _root_signature.Init(PanoToCubemap_RS::Num_RS, rootParameters, 1, &linearClampSampler);
+    
+    ID3DBlob *cs = (ID3DBlob*)LoadShaderModule(L"shaders/PanoToCubemap_CS.cso");
+    
+    // Create the PSO for GenerateMips shader.
+    D3D12_COMPUTE_PIPELINE_STATE_DESC compute_desc = {};
+    compute_desc.pRootSignature = _root_signature._handle;
+    compute_desc.CS = { (UINT8*)(cs->GetBufferPointer()), cs->GetBufferSize() };
+    compute_desc.NodeMask = 0;
+    compute_desc.CachedPSO = {};
+    compute_desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+    
+    _pso = {};
+    AssertHr(d3d_device->CreateComputePipelineState(&compute_desc, IIDE(&_pso._handle)));
+    
+    // Create some default texture UAV's to pad any unused UAV's during mip map generation.
+    _default_uav = device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 5);
+    
+    for ( UINT i = 0; i < 5; ++i )
+    {
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+        uavDesc.ViewDimension                    = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+        uavDesc.Format                           = DXGI_FORMAT_R8G8B8A8_UNORM;
+        uavDesc.Texture2DArray.ArraySize = 6; // Cubemap.
+        uavDesc.Texture2DArray.FirstArraySlice = 0;
+        uavDesc.Texture2DArray.MipSlice = i;
+        uavDesc.Texture2DArray.PlaneSlice = 0;
+        
+        d3d_device->CreateUnorderedAccessView(nullptr, nullptr, &uavDesc, _default_uav.GetDescriptorHandle(i));
+    }
+}
+
+void CommandList::PanoToCubemap_PSO::Free()
+{
+    _root_signature.Free();
+    _pso.Free();
+}
+
+//-----------------------------------------------------------------------------------------------//
+// Command List Implementation
+
 RenderError 
 CommandList::Init(D3D12_COMMAND_LIST_TYPE list_type)
 {
@@ -75,6 +141,7 @@ CommandList::Init(D3D12_COMMAND_LIST_TYPE list_type)
     }
     
     _generate_mips_pso.Init();
+    _pano_to_cubemap_pso.Init();
     _compute_command_list = 0;
     
     return result;
@@ -86,6 +153,7 @@ CommandList::Free()
     RenderError result = RenderError::Success;
     
     _generate_mips_pso.Free();
+    _pano_to_cubemap_pso.Free();
     
     D3D_RELEASE(_allocator);
     D3D_RELEASE(_handle);
@@ -336,7 +404,7 @@ CommandList::LoadTextureFromFile(const char *filename, bool gen_mipmaps)
     int x, y, channels;
     unsigned char *data = stbi_load(filename, &x, &y, &channels, desired_channels);
     
-    TEXTURE_ID result = LoadTextureFromMemory(data, x, y, desired_channels, gen_mipmaps );
+    TEXTURE_ID result = LoadTextureFromMemory(data, x, y, desired_channels, gen_mipmaps);
     // NOTE(Dustin): This free might have to wait until the command list is done executing...
     stbi_image_free(data);
     return result;
@@ -585,6 +653,107 @@ CommandList::GenerateMips_UAV(TEXTURE_ID tex_id, bool isSRGB)
     
     // TODO(Dustin): Clean up the SRV + descriptors?
 }
+
+void 
+CommandList::PanoToCubemap(TEXTURE_ID cubemap_texture, TEXTURE_ID pano_texture)
+{
+    assert(texture::IsValid(cubemap_texture) && texture::IsValid(pano_texture));
+    
+    if (_type == D3D12_COMMAND_LIST_TYPE_COPY)
+    {
+        if (!_compute_command_list )
+        {
+            _compute_command_list = device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE)->GetCommandList();
+        }
+        _compute_command_list->PanoToCubemap(cubemap_texture, pano_texture);
+        return;
+    }
+    
+    ID3D12Resource *cubemapResource = texture::GetResource(cubemap_texture)->_handle;
+    assert(cubemapResource);
+    D3D12_RESOURCE_DESC cubemapDesc = texture::GetResourceDesc(cubemap_texture);
+    
+    ID3D12Resource *stagingResource = cubemapResource;
+    auto stagingTexture  = texture::Create(stagingResource);
+    // If the passed-in resource does not allow for UAV access
+    // then create a staging resource that is used to generate
+    // the cubemap.
+    if ((cubemapDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) == 0)
+    {
+        auto d3d12Device = device::GetDevice();
+        
+        auto stagingDesc   = cubemapDesc;
+        stagingDesc.Format = Texture::GetUAVCompatableFormat( cubemapDesc.Format );
+        stagingDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        
+        AssertHr(d3d12Device->CreateCommittedResource(&d3d::GetHeapProperties(D3D12_HEAP_TYPE_DEFAULT), 
+                                                      D3D12_HEAP_FLAG_NONE, &stagingDesc,
+                                                      D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IIDE(&stagingResource)));
+        
+        ResourceStateTracker::AddGlobalResourceState(stagingResource, D3D12_RESOURCE_STATE_COPY_DEST);
+        
+        stagingTexture = texture::Create(stagingResource);
+        texture::SetName(stagingTexture, L"Pano to Cubemap Staging Texture" );
+        
+        CopyResource(texture::GetResource(stagingTexture)->_handle, texture::GetResource(cubemap_texture)->_handle);
+    }
+    
+    TransitionBarrier(texture::GetResource(stagingTexture)->_handle, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    
+    SetPipelineState(_pano_to_cubemap_pso._pso._handle);
+    SetComputeRootSignature(&_pano_to_cubemap_pso._root_signature);
+    
+    PanoToCubemap_PSO::PanoToCubemap_CB panoToCubemapCB;
+    
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+    uavDesc.Format                           = Texture::GetUAVCompatableFormat( cubemapDesc.Format );
+    uavDesc.ViewDimension                    = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+    uavDesc.Texture2DArray.FirstArraySlice   = 0;
+    uavDesc.Texture2DArray.ArraySize         = 6;
+    
+    ShaderResourceView srv;
+    srv.Init(texture::GetResource(pano_texture));
+    SetShaderResourceView(PanoToCubemap_RS::SrcTexture, 0, &srv, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+    
+    for (u32 mipSlice = 0; mipSlice < cubemapDesc.MipLevels;)
+    {
+        // Maximum number of mips to generate per pass is 5.
+        u32 numMips = fast_min( 5, cubemapDesc.MipLevels - mipSlice);
+        
+        panoToCubemapCB.first_mip = mipSlice;
+        panoToCubemapCB.cubemap_size =
+            fast_max(static_cast<u32>(cubemapDesc.Width), cubemapDesc.Height) >> mipSlice;
+        panoToCubemapCB.num_mips = numMips;
+        
+        SetCompute32BitConstants(PanoToCubemap_RS::PanoToCubemap_CB, panoToCubemapCB);
+        
+        for ( u32 mip = 0; mip < numMips; ++mip )
+        {
+            uavDesc.Texture2DArray.MipSlice = mipSlice + mip;
+            
+            UnorderedAccessView uav;
+            uav.Init(texture::GetResource(stagingTexture), nullptr, &uavDesc);
+            SetUnorderedAccessView(PanoToCubemap_RS::DstTexture, mip, &uav, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, 0, 0);
+        }
+        
+        if ( numMips < 5 )
+        {
+            // Pad unused mips. This keeps DX12 runtime happy.
+            _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageDescriptors(PanoToCubemap_RS::DstTexture, panoToCubemapCB.num_mips, 5 - numMips, _pano_to_cubemap_pso.GetDefaultUAV() );
+        }
+        
+        Dispatch(divide_align(panoToCubemapCB.cubemap_size, 16),
+                 divide_align(panoToCubemapCB.cubemap_size, 16), 6);
+        
+        mipSlice += numMips;
+    }
+    
+    if (stagingResource != cubemapResource)
+    {
+        CopyResource(texture::GetResource(cubemap_texture), texture::GetResource(stagingTexture));
+    }
+}
+
 
 // Set an inline CBV.
 // Note: Only Buffer resoruces can be used with inline UAV's.

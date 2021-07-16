@@ -6,9 +6,13 @@ fxc /nologo /Od /Zi /T vs_5_1 /FoImGuiVertex.cso             ImGuiVertex.hlsl
 fxc /nologo /Od /Zi /T ps_5_1 /FoImGuiPixel.cso              ImGuiPixel.hlsl
 
 fxc /nologo /Od /Zi /T cs_5_1 /FoGenerateMips_CS.cso         GenerateMips_CS.hlsl
+fxc /nologo /Od /Zi /T cs_5_1 /FoPanoToCubemap_CS.cso        PanoToCubemap_CS.hlsl
 
 fxc /nologo /Od /Zi /T vs_5_1 /FoTerrainVertex.cso           TerrainVertex.hlsl
 fxc /nologo /Od /Zi /T ps_5_1 /FoTerrainPixel.cso            TerrainPixel.hlsl
+
+fxc /nologo /Od /Zi /T vs_5_1 /FoSkybox_Vtx.cso           Skybox_Vtx.hlsl
+fxc /nologo /Od /Zi /T ps_5_1 /FoSkybox_Pxl.cso            Skybox_Pxl.hlsl
 
 :: Noise algorithms
 
@@ -22,3 +26,6 @@ fxc /nologo /Od /Zi /T ps_5_1 /FoHeightmapDownsample_Pxl.cso HeightmapDownsample
 
 fxc /nologo /Od /Zi /T vs_5_1 /FoCube_Vtx.cso                Experimental/Cube_Vtx.hlsl
 fxc /nologo /Od /Zi /T ps_5_1 /FoCube_Pxl.cso                Experimental/Cube_Pxl.hlsl
+
+fxc /nologo /Od /Zi /T vs_5_1 /FoEnvMapping_Vtx.cso          Experimental/EnvMapping_Vtx.hlsl
+fxc /nologo /Od /Zi /T ps_5_1 /FoEnvMapping_Pxl.cso          Experimental/EnvMapping_Pxl.hlsl

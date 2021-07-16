@@ -157,6 +157,7 @@ m3 m3_diag(r32 d);
 
 m4 m4_diag(r32 d);
 m4 m3_to_m4(m3 mat);
+static m3 m4_to_m3(m4 mat);
 m4 m4_mul(m4 left, m4 right);
 /* Creates a scaling matrix */
 m4 m4_scale(r32 sx, r32 sy, r32 sz);
@@ -641,6 +642,18 @@ m4 m3_to_m4(m3 mat)
     return result;
 }
 
+static m3
+m4_to_m3(m4 mat)
+{
+    m3 result = M3_IDENTITY;
+    
+    result.c0 = mat.c0.xyz;
+    result.c1 = mat.c1.xyz;
+    result.c2 = mat.c2.xyz;
+    
+    return result;
+}
+
 m4 m4_mul(m4 left, m4 r)
 {
     m4 result;
@@ -703,7 +716,7 @@ m4_look_at(v3 eye, v3 center, v3 up)
 {
     m4 result = M4_IDENTITY;
     
-#if 0
+#if 1
     
     v3 f = v3_norm(v3_sub(center, eye));
     v3 s = v3_norm(v3_cross(f, up));
@@ -773,7 +786,7 @@ m4 m4_perspective(r32 fov, r32 ar, r32 near_plane, r32 far_plane)
 {
     m4 result = M4_IDENTITY;
     
-#if 0
+#if 1
     r32 cotangent = 1.0f / tanf(fov * ((r32)MM_PI / 360.0f));
     
     result.p[0][0] = cotangent / ar;

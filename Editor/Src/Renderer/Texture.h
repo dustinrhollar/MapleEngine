@@ -11,6 +11,18 @@ union TEXTURE_ID
 };
 static const TEXTURE_ID INVALID_TEXTURE_ID = {0xFFFFFFFF};
 
+FORCE_INLINE bool
+operator==(TEXTURE_ID left, TEXTURE_ID right)
+{
+    return left.val == right.val;
+}
+
+FORCE_INLINE bool
+operator!=(TEXTURE_ID left, TEXTURE_ID right)
+{
+    return left.val != right.val;
+}
+
 struct Texture
 {
     void Init(D3D12_RESOURCE_DESC *rsrc_desc, D3D12_CLEAR_VALUE *clear_val = 0);
@@ -79,6 +91,8 @@ namespace texture
     static TEXTURE_ID Create(D3D12_RESOURCE_DESC *rsrc_desc, D3D12_CLEAR_VALUE *clear_val = 0);
     static TEXTURE_ID Create(ID3D12Resource *rsrc, D3D12_CLEAR_VALUE *clear_val = 0);
     static void Free(TEXTURE_ID tex);
+    
+    static void SetName(TEXTURE_ID tex_id, const wchar_t *name);
     
     static void  Reset(TEXTURE_ID tex_id);
     static bool  IsValid(TEXTURE_ID tex_id);

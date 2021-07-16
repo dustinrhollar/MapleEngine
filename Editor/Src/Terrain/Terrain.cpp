@@ -75,18 +75,8 @@ struct Terrain
     // Render with wireframe
     bool                _wireframe_mode;
     /* Maximum amount of tiles in x & y direction */
-    //u32                 _tile_x_count;
-    //u32                 _tile_y_count;
-    /* Vertex width/height of an individual tile */
-    //u32                 _tile_width;
-    //u32                 _tile_height;
-    /* List of tiles of (_tile_x_count * _tile_y_count) size */
     TerrainTileInfo     _tile_info;
     TerrainTile        *_tiles = 0;
-    
-    // Holding onto vertex/index data for now.
-    //void *_vertex_data;
-    //void *_index_data;
     
     void SetWireframe(bool set) { _wireframe_mode = set; }
 };

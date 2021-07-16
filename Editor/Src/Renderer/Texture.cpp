@@ -28,8 +28,8 @@ texture::Create(ID3D12Resource *rsrc, D3D12_CLEAR_VALUE *clear_val)
 {
     TEXTURE_ID result = GenTexId();
     g_texture_storage[result.idx].Init(rsrc, clear_val);
-    ResourceStateTracker::AddGlobalResourceState(g_texture_storage[result.idx]._resource._handle, 
-                                                 D3D12_RESOURCE_STATE_COMMON);
+    //ResourceStateTracker::AddGlobalResourceState(g_texture_storage[result.idx]._resource._handle, 
+    //D3D12_RESOURCE_STATE_COMMON);
     return result;
 }
 
@@ -134,6 +134,17 @@ texture::GetTexture(TEXTURE_ID tex_id)
     }
     return result;
 }
+static void 
+texture::SetName(TEXTURE_ID tex_id, const wchar_t *name)
+{
+    if (IsValid(tex_id))
+    {
+        Texture* texture = &g_texture_storage[tex_id.idx];
+        texture->_resource._handle->SetName(name);
+    }
+}
+
+
 
 static D3D12_UNORDERED_ACCESS_VIEW_DESC
 GetUAVDesc(D3D12_RESOURCE_DESC* resDesc, UINT mipSlice, UINT arraySlice = 0,

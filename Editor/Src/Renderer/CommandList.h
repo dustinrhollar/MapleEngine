@@ -1,6 +1,17 @@
 #ifndef _COMMAND_LIST_H
 #define _COMMAND_LIST_H
 
+namespace PanoToCubemap_RS 
+{
+    enum 
+    {
+        PanoToCubemap_CB,
+        SrcTexture,
+        DstTexture,
+        Num_RS,
+    };
+};
+
 struct CommandList
 {
     RenderError Init(D3D12_COMMAND_LIST_TYPE list_type);
@@ -128,6 +139,7 @@ struct CommandList
     TEXTURE_ID LoadTextureFromMemory(void *pixels, int width, int height, int num_channels, bool gen_mips = true);
     void GenerateMips(TEXTURE_ID tex_id);
     void GenerateMips_UAV(TEXTURE_ID tex_id, bool is_srgb);
+    void PanoToCubemap(TEXTURE_ID cubemap_texture, TEXTURE_ID pano_texture);
     
     // Set an inline SRV.
     // Note: Only Buffer resources can be used with inline SRV's
@@ -258,6 +270,35 @@ struct CommandList
         // need to be padded with default UAVs (to keep the DX12 runtime happy).
         DescriptorAllocation _default_uav;
     } _generate_mips_pso = {};
+    
+    struct PanoToCubemap_PSO
+    {
+        void Init();
+        void Free();
+        
+        D3D12_CPU_DESCRIPTOR_HANDLE GetDefaultUAV()
+        {
+            return _default_uav.GetDescriptorHandle();
+        }
+        
+        // Struct used in the PanoToCubemap_CS compute shader.
+        struct PanoToCubemap_CB
+        {
+            // Size of the cubemap face in pixels at the current mipmap level.
+            u32 cubemap_size;
+            // The first mip level to generate.
+            u32 first_mip;
+            // The number of mips to generate.
+            u32 num_mips;
+        };
+        
+        RootSignature       _root_signature;
+        PipelineStateObject _pso;
+        // Default (no resource) UAV's to pad the unused UAV descriptors.
+        // If generating less than 4 mip map levels, the unused mip maps
+        // need to be padded with default UAVs (to keep the DX12 runtime happy).
+        DescriptorAllocation _default_uav;
+    } _pano_to_cubemap_pso = {};
     
     // MIPS command list
     CommandList *_compute_command_list = 0;

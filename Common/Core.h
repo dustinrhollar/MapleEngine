@@ -104,7 +104,7 @@ if (PlatformShowAssertDialog(message, __FILE__, (u32)__LINE__)) DebugBreak(); \
 #endif // NDEBUG
 
 FORCE_INLINE void
-fast_swap(i32 x, i32 y)
+fast_swap(i32 &x, i32 &y)
 {
     i32 _x = x;            
     i32 _y = y;            
@@ -122,7 +122,7 @@ fast_swapf(r32 &x, r32 &y)
 }
 
 FORCE_INLINE void
-fast_swapd(r64 x, r64 y)
+fast_swapd(r64 &x, r64 &y)
 {
     r64 _x = x;            
     r64 _y = y;            
