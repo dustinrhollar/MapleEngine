@@ -498,6 +498,51 @@ namespace d3d
         }
         
         FORCE_INLINE D3D12_ROOT_PARAMETER1
+            InitAsConstantBufferView(UINT shaderRegister,
+                                     UINT registerSpace = 0,
+                                     D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+                                     D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+        {
+            D3D12_ROOT_PARAMETER1 result = {};
+            result.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+            result.ShaderVisibility = visibility;
+            result.Descriptor.Flags          = flags;
+            result.Descriptor.ShaderRegister = shaderRegister;
+            result.Descriptor.RegisterSpace  = registerSpace;
+            return result;
+        }
+        
+        FORCE_INLINE D3D12_ROOT_PARAMETER1
+            InitAsShaderResourceView(UINT shaderRegister,
+                                     UINT registerSpace = 0,
+                                     D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+                                     D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+        {
+            D3D12_ROOT_PARAMETER1 result = {};
+            result.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+            result.ShaderVisibility = visibility;
+            result.Descriptor.Flags          = flags;
+            result.Descriptor.ShaderRegister = shaderRegister;
+            result.Descriptor.RegisterSpace  = registerSpace;
+            return result;
+        }
+        
+        FORCE_INLINE D3D12_ROOT_PARAMETER1
+            InitAsUnorderedAccessView(UINT shaderRegister,
+                                      UINT registerSpace = 0,
+                                      D3D12_ROOT_DESCRIPTOR_FLAGS flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+                                      D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
+        {
+            D3D12_ROOT_PARAMETER1 result = {};
+            result.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
+            result.ShaderVisibility = visibility;
+            result.Descriptor.Flags          = flags;
+            result.Descriptor.ShaderRegister = shaderRegister;
+            result.Descriptor.RegisterSpace  = registerSpace;
+            return result;
+        }
+        
+        FORCE_INLINE D3D12_ROOT_PARAMETER1
             InitAsDescriptorTable(UINT numDescriptorRanges,
                                   D3D12_DESCRIPTOR_RANGE1* pDescriptorRanges,
                                   D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)

@@ -502,7 +502,7 @@ DescriptorAllocation::Free()
         DescriptorAllocatorPage *page = &_allocator->_heap_pool[_page_id];
         page->Release(this);
         
-        _descriptor.ptr = 0;
+        _descriptor = {};
         _num_handles = 0;
         _descriptor_size = 0;
         _allocator = 0;
@@ -879,7 +879,6 @@ DynamicDescriptorHeap::Reset()
     arrsetlen(_avail_descriptors, 0);
     for (u32 i = 0; i < (u32)arrlen(_descriptor_heap_pool); ++i)
         arrput(_avail_descriptors, _descriptor_heap_pool[i]);
-    //_avail_descriptors[i] = _descriptor_heap_pool[i];
     
     _current_descriptor_heap = 0; // needs to Reset ComPtr?
     _current_cpu_handle = {};

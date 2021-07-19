@@ -226,7 +226,8 @@ d3d_imgui::Render(ImDrawData* draw_data, RenderTarget *render_target)
                 
                 if ( scissorRect.right - scissorRect.left > 0.0f && scissorRect.bottom - scissorRect.top > 0.0 )
                 {
-                    TEXTURE_ID texture_id = { (u32)((uptr)drawCmd.GetTexID()) };
+                    TEXTURE_ID texture_id;
+                    texture_id.val = (u32)((uptr)drawCmd.GetTexID());
                     
                     command_list->SetShaderResourceView(RootParameters::FontTexture, 0, texture_id,
                                                         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);

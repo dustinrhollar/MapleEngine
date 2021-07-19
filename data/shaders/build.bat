@@ -11,8 +11,8 @@ fxc /nologo /Od /Zi /T cs_5_1 /FoPanoToCubemap_CS.cso        PanoToCubemap_CS.hl
 fxc /nologo /Od /Zi /T vs_5_1 /FoTerrainVertex.cso           TerrainVertex.hlsl
 fxc /nologo /Od /Zi /T ps_5_1 /FoTerrainPixel.cso            TerrainPixel.hlsl
 
-fxc /nologo /Od /Zi /T vs_5_1 /FoSkybox_Vtx.cso           Skybox_Vtx.hlsl
-fxc /nologo /Od /Zi /T ps_5_1 /FoSkybox_Pxl.cso            Skybox_Pxl.hlsl
+fxc /nologo /Od /Zi /T vs_5_1 /FoSkybox_Vtx.cso              Skybox_Vtx.hlsl
+fxc /nologo /Od /Zi /T ps_5_1 /FoSkybox_Pxl.cso              Skybox_Pxl.hlsl
 
 :: Noise algorithms
 
@@ -29,3 +29,15 @@ fxc /nologo /Od /Zi /T ps_5_1 /FoCube_Pxl.cso                Experimental/Cube_P
 
 fxc /nologo /Od /Zi /T vs_5_1 /FoEnvMapping_Vtx.cso          Experimental/EnvMapping_Vtx.hlsl
 fxc /nologo /Od /Zi /T ps_5_1 /FoEnvMapping_Pxl.cso          Experimental/EnvMapping_Pxl.hlsl
+
+fxc /nologo /Od /Zi /T vs_5_1 /FoPhongLighting_Vtx.cso       Experimental/PhongLighting_Vtx.hlsl
+fxc /nologo /Od /Zi /T ps_5_1 /FoPhongLighting_Pxl.cso       Experimental/PhongLighting_Pxl.hlsl
+
+fxc /nologo /Od /Zi /T vs_5_1 /FoLightCube_Vtx.cso           Experimental/LightCube_Vtx.hlsl
+fxc /nologo /Od /Zi /T ps_5_1 /FoLightCube_Pxl.cso           Experimental/LightCube_Pxl.hlsl
+
+fxc /nologo /Od /Zi /T vs_5_1 /FoHDRToSDR_Vtx.cso            Experimental/HDRToSDR_Vtx.hlsl
+fxc /nologo /Od /Zi /T ps_5_1 /FoHDRToSDR_Pxl.cso            Experimental/HDRToSDR_Pxl.hlsl
+
+fxc /nologo /Od /Zi /T vs_5_1 /FoHDRLighting_Vtx.cso         Experimental/HDRLighting_Vtx.hlsl
+fxc /nologo /Od /Zi /T ps_5_1 /FoHDRLighting_Pxl.cso         Experimental/HDRLighting_Pxl.hlsl

@@ -1,7 +1,7 @@
 
 namespace texture {
     
-    static const u32   MIN_TEX_FREE_INDICES = 10; 
+    static const u32   MIN_TEX_FREE_INDICES = 50; 
     static Texture    *g_texture_storage = 0;
     static u8         *g_texture_gen     = 0;
     static u32        *g_free_indices    = 0;
@@ -33,6 +33,18 @@ texture::Create(ID3D12Resource *rsrc, D3D12_CLEAR_VALUE *clear_val)
     return result;
 }
 
+static void 
+texture::SafeFree(TEXTURE_ID tex)
+{
+    if (IsValid(tex))
+    {
+        Texture *texture = GetTexture(tex);
+        texture->SafeFree();
+        g_texture_gen[tex.idx] += 1;     // invalidate the texture id
+        arrput(g_free_indices, tex.idx); // mark the slot as available
+    }
+}
+
 static void
 texture::Free(TEXTURE_ID tex)
 {
@@ -43,8 +55,6 @@ texture::Free(TEXTURE_ID tex)
         g_texture_gen[tex.idx] += 1;     // invalidate the texture id
         arrput(g_free_indices, tex.idx); // mark the slot as available
     }
-    
-    // NOTE(Dustin): Remove from global resource state?
 }
 
 static TEXTURE_ID 
@@ -226,6 +236,26 @@ Texture::Init(ID3D12Resource *rsrc, D3D12_CLEAR_VALUE *clear_val)
 }
 
 void 
+Texture::SafeFree()
+{
+    _rtv.Free();
+    _dsv.Free();
+    _srv.Free();
+    _uav.Free();
+    
+    // Garbage collect the resource
+    CommandList *active_list = RendererGetActiveCommandList();
+    active_list->DeleteResource(&_resource);
+    ResourceStateTracker::RemoveGlobalResourceState(_resource._handle);
+    
+    _rtv = {};
+    _dsv = {};
+    _srv = {};
+    _uav = {};
+    _resource = {};
+}
+
+void 
 Texture::Free()
 {
     _rtv.Free();
@@ -233,6 +263,12 @@ Texture::Free()
     _srv.Free();
     _uav.Free();
     _resource.Free();
+    
+    _rtv = {};
+    _dsv = {};
+    _srv = {};
+    _uav = {};
+    _resource = {};
 }
 
 void 
@@ -244,7 +280,6 @@ Texture::Resize(u32 width, u32 height, u32 depthOrArraySize)
     {
         // NOTE(Dustin): Remove the previous resource from global state?
         // D3D_RELEASE the previous resource handle?
-        
         D3D12_RESOURCE_DESC resDesc = _resource.GetResourceDesc();
         
         resDesc.Width            = fast_max(width, 1);
@@ -254,6 +289,11 @@ Texture::Resize(u32 width, u32 height, u32 depthOrArraySize)
         
         D3D12_CLEAR_VALUE *clear_val;
         _resource.GetClearValue(&clear_val);
+        
+        // Garbage collect the resource
+        CommandList *active_list = RendererGetActiveCommandList();
+        active_list->DeleteResource(&_resource);
+        ResourceStateTracker::RemoveGlobalResourceState(_resource._handle);
         
         D3D12_HEAP_PROPERTIES heap_prop = d3d::GetHeapProperties();
         AssertHr(d3d_device->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE, &resDesc,

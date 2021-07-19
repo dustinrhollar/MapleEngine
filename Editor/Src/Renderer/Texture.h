@@ -23,11 +23,47 @@ operator!=(TEXTURE_ID left, TEXTURE_ID right)
     return left.val != right.val;
 }
 
+FORCE_INLINE DXGI_FORMAT 
+MakeSRGB(DXGI_FORMAT fmt)
+{
+    switch (fmt)
+    {
+        case DXGI_FORMAT_R8G8B8A8_UNORM:
+        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        
+        case DXGI_FORMAT_BC1_UNORM:
+        return DXGI_FORMAT_BC1_UNORM_SRGB;
+        
+        case DXGI_FORMAT_BC2_UNORM:
+        return DXGI_FORMAT_BC2_UNORM_SRGB;
+        
+        case DXGI_FORMAT_BC3_UNORM:
+        return DXGI_FORMAT_BC3_UNORM_SRGB;
+        
+        case DXGI_FORMAT_B8G8R8A8_UNORM:
+        return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+        
+        case DXGI_FORMAT_B8G8R8X8_UNORM:
+        return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+        
+        case DXGI_FORMAT_BC7_UNORM:
+        return DXGI_FORMAT_BC7_UNORM_SRGB;
+        
+        default:
+        return fmt;
+    }
+}
+
 struct Texture
 {
     void Init(D3D12_RESOURCE_DESC *rsrc_desc, D3D12_CLEAR_VALUE *clear_val = 0);
     void Init(ID3D12Resource *rsrc, D3D12_CLEAR_VALUE *clear_val = 0);
+    
     void Free();
+    // Retrieves the current commandlist and adds the resource to its garbage collector.
+    // The resource will be free when that commandlist is reset. Use this function if you 
+    // are worried the texture is still in use on a command queue.
+    void SafeFree();
     
     void Resize(u32 width, u32 height, u32 depthOrArraySize = 1);
     
@@ -90,7 +126,12 @@ namespace texture
 {
     static TEXTURE_ID Create(D3D12_RESOURCE_DESC *rsrc_desc, D3D12_CLEAR_VALUE *clear_val = 0);
     static TEXTURE_ID Create(ID3D12Resource *rsrc, D3D12_CLEAR_VALUE *clear_val = 0);
+    
     static void Free(TEXTURE_ID tex);
+    // Retrieves the current commandlist and adds the resource to its garbage collector.
+    // The resource will be free when that commandlist is reset. Use this function if you 
+    // are worried the texture is still in use on a command queue.
+    static void SafeFree(TEXTURE_ID tex);
     
     static void SetName(TEXTURE_ID tex_id, const wchar_t *name);
     

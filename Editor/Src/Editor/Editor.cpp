@@ -109,7 +109,7 @@ editor::KeyPressCallback(input_layer::Event event, void *args)
     }
     if (experimental::g_viewport_focused)
     {
-        experimental::g_camera.OnKeyPress((MapleKey)event.key_press.key);
+        //experimental::g_camera.OnKeyPress((MapleKey)event.key_press.key);
     }
     return false;
 }
@@ -123,7 +123,7 @@ editor::KeyReleaseCallback(input_layer::Event event, void *args)
     }
     if (experimental::g_viewport_focused)
     {
-        experimental::g_camera.OnKeyRelease((MapleKey)event.key_press.key);
+        //experimental::g_camera.OnKeyRelease((MapleKey)event.key_press.key);
     }
     return false;
 }
@@ -137,7 +137,7 @@ editor::ButtonPressCallback(input_layer::Event event, void *args)
     }
     if (experimental::g_viewport_focused && experimental::g_viewport_hovered)
     {
-        experimental::g_camera.OnMouseButtonPress((MapleKey)event.key_press.key);
+        //experimental::g_camera.OnMouseButtonPress((MapleKey)event.key_press.key);
     }
     
     BIT32_TOGGLE_1(g_mouse_button_mask, event.button_press.button);
@@ -148,7 +148,7 @@ static bool
 editor::ButtonReleaseCallback(input_layer::Event event, void *args)
 {
     g_main_camera.OnMouseButtonRelease(event.button_press.button);
-    experimental::g_camera.OnMouseButtonRelease((MapleKey)event.key_press.key);
+    //experimental::g_camera.OnMouseButtonRelease((MapleKey)event.key_press.key);
     BIT32_TOGGLE_0(g_mouse_button_mask, event.button_press.button);
     return false;
 }
@@ -569,60 +569,12 @@ editor::Render()
         
         ImGui::BeginTabBar("TabBar");
         {
-            
-            
             //-----------------------------------------------------------------------------------//
             // Terrain Generator Tab
             
             if (ImGui::BeginTabItem("Experimental"))
             {
-                static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-                // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background and handle the pass-thru hole, so we ask Begin() to not render a background.
-                if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-                    window_flags |= ImGuiWindowFlags_NoBackground;
-                
-                ImGuiID dockspace_id = ImGui::GetID("ExeperimentalDockSpace");
-                ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-                
-                static auto first_time = true;
-                if (first_time)
-                {
-                    first_time = false;
-                    
-                    // Sets central node?
-                    ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-                    ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-                    ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
-                    
-                    // split the dockspace into 2 nodes -- DockBuilderSplitNode takes in the following args in the following order
-                    //   window ID to split, direction, fraction (between 0 and 1), the final two setting let's us choose which id we want (which ever one we DON'T set as NULL, will be returned by the function)
-                    //                                                              out_id_at_dir is the id of the node in the direction we specified earlier, out_id_at_opposite_dir is in the opposite direction
-                    auto dock_id_left     = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.20f, nullptr, &dockspace_id);
-                    auto dock_id_down     = ImGui::DockBuilderSplitNode(dockspace_id,  ImGuiDir_Down, 0.250f, nullptr, &dockspace_id);
-                    
-                    // we now dock our windows into the docking node we made above
-                    //ImGui::DockBuilderDockWindow("Viewport", dockspace_id);
-                    ImGui::DockBuilderDockWindow("Experimental Scene", dock_id_left);
-                    ImGui::DockBuilderDockWindow("Experimental Content Browser", dock_id_down);
-                    ImGui::DockBuilderDockWindow("Experimental Viewport", dockspace_id);
-                    
-                    ImGui::DockBuilderFinish(dockspace_id);
-                }
-                
-                
-                ImGui::Begin("Experimental Scene");
-                //experimental::DrawScene();
-                ImGui::End();
-                
-                ImGui::Begin("Experimental Content Browser");
-                //experimental::DrawContentBrowser();
-                ImGui::End();
-                
-                bool renderable = ImGui::Begin("Experimental Viewport");
-                //ImGui::Text("Hello viewport");
-                if (renderable) experimental::DrawWindow();
-                ImGui::End();
-                
+                experimental::DrawDocker();
                 ImGui::EndTabItem();
             }
             
@@ -825,8 +777,6 @@ editor::Render()
             ImGui::ShowMetricsWindow(&g_show_imgui_metrics);
     }
     ImGui::End(); // TabTest
-    
-    //ImGui::End(); // MainWindow
     
     // End imgui frame
     ImGui::Render();

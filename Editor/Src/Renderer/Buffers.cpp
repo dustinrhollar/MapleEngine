@@ -35,7 +35,70 @@ struct IndexBuffer
     }
 };
 
+struct ByteAddressBuffer
+{
+    void Init(D3D12_RESOURCE_DESC *desc);
+    void Init(ID3D12Resource *resource);
+    void Free();
+    
+    Resource _resource;
+    u64      _size;
+};
 
+struct ConstantBuffer
+{
+    void Init(ID3D12Resource *resource);
+    void Free();
+    
+    Resource _resource;
+    u64      _size;
+};
+
+struct StructuredBuffer
+{
+    void Init(u64 element_count, u64 stride);
+    void Init(ID3D12Resource *resource, u64 element_count, u64 stride);
+    void Free();
+    
+    Resource _resource;
+    u64               _num_elements;
+    u64               _stride;
+    // A buffer to store the internal counter for the structured buffer
+    ByteAddressBuffer _counter_buffer;
+};
+
+struct ConstantBufferView
+{
+    void Init(ConstantBuffer *cb, u64 offset = 0)
+    {
+        ID3D12Device *d3d_device = device::GetDevice();
+        ID3D12Resource *rsrc = cb->_resource._handle;
+        
+        _cb = cb;
+        
+        D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
+        cbv.BufferLocation = rsrc->GetGPUVirtualAddress() + offset;
+        cbv.SizeInBytes = memory_align(_cb->_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+        
+        _descriptor = device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        d3d_device->CreateConstantBufferView(&cbv, _descriptor.GetDescriptorHandle());
+    }
+    
+    void Free()
+    {
+        _cb = 0;
+        _descriptor.Free();
+        _descriptor = {};
+    }
+    
+    D3D12_CPU_DESCRIPTOR_HANDLE GetDescriptorHandle()
+    {
+        return _descriptor.GetDescriptorHandle();
+    }
+    
+    ConstantBuffer      *_cb;
+    DescriptorAllocation _descriptor;
+};
 
 RenderError 
 VertexBuffer::Init(ID3D12Resource *resource, u64 vertex_count, u64 stride)
@@ -58,7 +121,13 @@ RenderError
 VertexBuffer::Free()
 {
     RenderError result = RenderError::Success;
-    _resource.Free();
+    //_resource.Free();
+    
+    // Garbage collect the resource
+    CommandList *active_list = RendererGetActiveCommandList();
+    active_list->DeleteResource(&_resource);
+    ResourceStateTracker::RemoveGlobalResourceState(_resource._handle);
+    
     return result;
 }
 
@@ -81,9 +150,99 @@ IndexBuffer::Init(ID3D12Resource *resource, u64 indices_count, u64 stride)
     return result;
 }
 
-RenderError IndexBuffer::Free()
+RenderError
+IndexBuffer::Free()
 {
     RenderError result = RenderError::Success;
-    _resource.Free();
+    //_resource.Free();
+    
+    // Garbage collect the resource
+    CommandList *active_list = RendererGetActiveCommandList();
+    active_list->DeleteResource(&_resource);
+    ResourceStateTracker::RemoveGlobalResourceState(_resource._handle);
+    
     return result;
+}
+
+void 
+ByteAddressBuffer::Init(D3D12_RESOURCE_DESC *desc)
+{
+    _size = desc->Width;
+    _resource.Init(desc);
+}
+
+void 
+ByteAddressBuffer::Init(ID3D12Resource *resource)
+{
+    _resource.Init(resource);
+    _size = _resource.GetResourceDesc().Width;
+}
+
+void 
+ByteAddressBuffer::Free()
+{
+    // Garbage collect the resource
+    CommandList *active_list = RendererGetActiveCommandList();
+    active_list->DeleteResource(&_resource);
+    ResourceStateTracker::RemoveGlobalResourceState(_resource._handle);
+    
+    //_resource.Free();
+    _size = 0;
+}
+
+void
+ConstantBuffer::Init(ID3D12Resource *resource)
+{
+    _resource.Init(resource);
+    _size = _resource.GetResourceDesc().Width;
+}
+
+void
+ConstantBuffer::Free()
+{
+    // Garbage collect the resource
+    CommandList *active_list = RendererGetActiveCommandList();
+    active_list->DeleteResource(&_resource);
+    ResourceStateTracker::RemoveGlobalResourceState(_resource._handle);
+    
+    //_resource.Free();
+}
+
+void
+StructuredBuffer::Init(u64 element_count, u64 stride)
+{
+    _num_elements = element_count;
+    _stride = stride;
+    
+    // TODO(Dustin): Create buffer desc
+    D3D12_RESOURCE_DESC desc = d3d::GetBufferResourceDesc(_num_elements * _stride, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    _resource.Init(&desc);
+    
+    // TODO(Dustin): Create a byte address buffer (4)
+    desc = d3d::GetBufferResourceDesc(4, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    _counter_buffer.Init(&desc);
+}
+
+void
+StructuredBuffer::Init(ID3D12Resource *resource, u64 element_count, u64 stride)
+{
+    _num_elements = element_count;
+    _stride = stride;
+    _resource.Init(resource);
+    
+    // TODO(Dustin): Create a byte address buffer  (4)
+    D3D12_RESOURCE_DESC desc = d3d::GetBufferResourceDesc(4, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    _counter_buffer.Init(&desc);
+}
+
+void
+StructuredBuffer::Free()
+{
+    // Garbage collect the resource
+    CommandList *active_list = RendererGetActiveCommandList();
+    active_list->DeleteResource(&_resource);
+    ResourceStateTracker::RemoveGlobalResourceState(_resource._handle);
+    
+    //_resource.Free();
+    _counter_buffer.Free();
 }

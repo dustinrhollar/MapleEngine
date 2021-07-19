@@ -35,6 +35,9 @@ void
 Resource::Free()
 {
     if (_handle) D3D_RELEASE(_handle);
+    _format_support = {};
+    _has_clear_val = false;
+    _clear_value = {};
 }
 
 // Check if the resource format supports a specific feature.

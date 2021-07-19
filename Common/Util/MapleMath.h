@@ -172,6 +172,9 @@ m4 m4_rotate_y(r32 theta);
 m4 m4_rotate_z(r32 theta);
 m4 m4_rotate(r32 theta, v3 axis);
 
+static v4 m4_mul_v4(m4 m, v4 v);
+static m4 m4_inverse(m4 m);
+
 // QUATERNION Pre-decs
 qt qt_init(r32 x, r32 y, r32 z, r32 w);
 qt qt_init(const r32 p[4]);
@@ -686,6 +689,48 @@ m4 m4_mul(m4 left, m4 r)
     return result;
 }
 
+// https://gist.github.com/mattatz/86fff4b32d198d0928d0fa4ff32cf6fa
+static m4 
+m4_inverse(m4 m)
+{
+    float n11 = m.p[0][0], n12 = m.p[1][0], n13 = m.p[2][0], n14 = m.p[3][0];
+    float n21 = m.p[0][1], n22 = m.p[1][1], n23 = m.p[2][1], n24 = m.p[3][1];
+    float n31 = m.p[0][2], n32 = m.p[1][2], n33 = m.p[2][2], n34 = m.p[3][2];
+    float n41 = m.p[0][3], n42 = m.p[1][3], n43 = m.p[2][3], n44 = m.p[3][3];
+    
+    float t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44;
+    float t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44;
+    float t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44;
+    float t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+    
+    float det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
+    float idet = 1.0f / det;
+    
+    m4 ret = M4_IDENTITY;
+    
+    ret.p[0][0] = t11 * idet;
+    ret.p[0][1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * idet;
+    ret.p[0][2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * idet;
+    ret.p[0][3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * idet;
+    
+    ret.p[1][0] = t12 * idet;
+    ret.p[1][1] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * idet;
+    ret.p[1][2] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * idet;
+    ret.p[1][3] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * idet;
+    
+    ret.p[2][0] = t13 * idet;
+    ret.p[2][1] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * idet;
+    ret.p[2][2] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * idet;
+    ret.p[2][3] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * idet;
+    
+    ret.p[3][0] = t14 * idet;
+    ret.p[3][1] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * idet;
+    ret.p[3][2] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * idet;
+    ret.p[3][3] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * idet;
+    
+    return ret;
+}
+
 /* Creates a scaling matrix */
 m4 m4_scale(r32 sx, r32 sy, r32 sz)
 {
@@ -695,6 +740,50 @@ m4 m4_scale(r32 sx, r32 sy, r32 sz)
     result.p[1][1] = sy;
     result.p[2][2] = sz;
     
+    return result;
+}
+
+static m4
+m4_transpose(m4 in)
+{
+    m4 result = {};
+    
+    result.p[0][0] = in.p[0][0];
+    result.p[0][1] = in.p[1][0];
+    result.p[0][2] = in.p[2][0];
+    result.p[0][3] = in.p[3][0];
+    
+    result.p[1][0] = in.p[0][1];
+    result.p[1][1] = in.p[1][1];
+    result.p[1][2] = in.p[2][1];
+    result.p[1][3] = in.p[3][1];
+    
+    result.p[2][0] = in.p[0][2];
+    result.p[2][1] = in.p[1][2];
+    result.p[2][2] = in.p[2][2];
+    result.p[2][3] = in.p[3][2];
+    
+    result.p[3][0] = in.p[0][3];
+    result.p[3][1] = in.p[1][3];
+    result.p[3][2] = in.p[2][3];
+    result.p[3][3] = in.p[3][3];
+    
+    return result;
+}
+
+static v4  
+m4_mul_v4(m4 m, v4 v)
+{
+    v4 r0 = { m.p[0][0], m.p[1][0], m.p[2][0], m.p[3][0] };
+    v4 r1 = { m.p[0][1], m.p[1][1], m.p[2][1], m.p[3][1] };
+    v4 r2 = { m.p[0][2], m.p[1][2], m.p[2][2], m.p[3][2] };
+    v4 r3 = { m.p[0][3], m.p[1][3], m.p[2][3], m.p[3][3] };
+    
+    v4 result = {};
+    result.x = v4_dot(v, r0);
+    result.y = v4_dot(v, r1);
+    result.z = v4_dot(v, r2);
+    result.w = v4_dot(v, r3);
     return result;
 }
 

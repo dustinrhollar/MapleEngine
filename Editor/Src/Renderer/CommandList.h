@@ -30,7 +30,15 @@ struct CommandList
     void ResolveSubresource(Resource* dst_resource, Resource* src_resouce,
                             u32 dstSubresource = 0, u32 srcSubresource = 0 );
     
-    // TODO(Dustin): Resolve subresource (for mipmapping)
+    void SetScissorRect(const D3D12_RECT &scissor_rect);
+    void SetScissorRects(const D3D12_RECT *scissor_rect, u32 num_rects);
+    
+    void SetViewport(const D3D12_VIEWPORT &viewport);
+    void SetViewports(const D3D12_VIEWPORT *viewports, u32 num_viewports);
+    
+    void ClearTexture(TEXTURE_ID tex_id, r32 clear_color[4]);
+    void ClearDepthStencilTexture(TEXTURE_ID tex_id, D3D12_CLEAR_FLAGS clearFlags,
+                                  r32 depth = 1.0f, u8 stencil = 0 );
     
     void CopyVertexBuffer(struct VertexBuffer* vertexBuffer, u64 numVertices, u64 vertexStride, void* vertexBufferData);
     template<typename T>
@@ -48,17 +56,26 @@ struct CommandList
         CopyIndexBuffer(indexBuffer, count, sizeof(T), vertexBufferData);
     }
     
-    // TODO(Dustin): Constant Buffer, Byte Address Buffer, Structured Buffer
+    // Copy the contents to a constant buffer in GPU memory.
+    void CopyConstantBuffer(struct ConstantBuffer *cb, u64 bufferSize, const void* bufferData );
+    template<typename T> void CopyConstantBuffer(struct ConstantBuffer *cb, const T* data)
+    {
+        CopyConstantBuffer(cb, sizeof(T), data);
+    }
     
-    void SetScissorRect(const D3D12_RECT &scissor_rect);
-    void SetScissorRects(const D3D12_RECT *scissor_rect, u32 num_rects);
+    // Copy the contents to a byte address buffer in GPU memory.
+    void CopyByteAddressBuffer(struct ByteAddressBuffer *bab, u64 bufferSize, const void* bufferData);
+    template<typename T> void CopyByteAddressBuffer(struct ByteAddressBuffer *bab, const T* data)
+    {
+        CopyByteAddressBuffer(bab, sizeof(T), data);
+    }
     
-    void SetViewport(const D3D12_VIEWPORT &viewport);
-    void SetViewports(const D3D12_VIEWPORT *viewports, u32 num_viewports);
-    
-    void ClearTexture(TEXTURE_ID tex_id, r32 clear_color[4]);
-    void ClearDepthStencilTexture(TEXTURE_ID tex_id, D3D12_CLEAR_FLAGS clearFlags,
-                                  r32 depth = 1.0f, u8 stencil = 0 );
+    // Copy the contents to a structured buffer in GPU memory.
+    void CopyStructuredBuffer(struct StructuredBuffer *sb, u64  numElements, u64 elementSize, const void* bufferData);
+    template<typename T> void  CopyStructuredBuffer(struct StructuredBuffer *sb, T* bufferData, u64 count)
+    {
+        CopyStructuredBuffer(sb, count, sizeof(T), bufferData);
+    }
     
     void SetDynamicVertexBuffer(u32 slot, u64 numVertices, u64 vertexSize, void* vertexBufferData );
     template<typename T>
@@ -93,6 +110,20 @@ struct CommandList
         SetCompute32BitConstants(rootParameterIndex, sizeof( T ) / sizeof( u32 ), &constants);
     }
     
+    // Set a dynamic constant buffer data to an inline descriptor in the root signature.
+    void SetGraphicsDynamicConstantBuffer(u32 rootParameterIndex, u64 sizeInBytes, const void* bufferData);
+    template<typename T> void SetGraphicsDynamicConstantBuffer(u32 rootParameterIndex, const T* data)
+    {
+        SetGraphicsDynamicConstantBuffer(rootParameterIndex, sizeof(T), data);
+    }
+    
+    // Set dynamic structured buffer contents.
+    void SetGraphicsDynamicStructuredBuffer(u32 slot, u64 numElements, u64 elementSize, const void* bufferData);
+    template<typename T> void SetGraphicsDynamicStructuredBuffer(u32 slot, const T* bufferData, u64 count)
+    {
+        SetGraphicsDynamicStructuredBuffer(slot, count, sizeof(T), bufferData);
+    }
+    
     void SetGraphicsRootSignature(struct RootSignature *root_sig);
     void SetComputeRootSignature(struct RootSignature *root_sig);
     
@@ -118,6 +149,11 @@ struct CommandList
     void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, ID3D12DescriptorHeap* heap);
     void BindDescriptorHeaps();
     
+    // To delete resource that could potentially be on the queue,
+    // call this function. The resource will be garbage collected
+    // and deleted when the command list is reset
+    void DeleteResource(Resource *resource);
+    // Internal API, users should not to call these three functions!
     void TrackObject(ID3D12Object* object);
     void TrackResource(ID3D12Resource *resource);
     void ReleaseTrackedObjects();
@@ -135,8 +171,9 @@ struct CommandList
                                 D3D12_SUBRESOURCE_DATA *subresources);
     
     
-    TEXTURE_ID LoadTextureFromFile(const char *filename, bool gen_mips = true);
-    TEXTURE_ID LoadTextureFromMemory(void *pixels, int width, int height, int num_channels, bool gen_mips = true);
+    TEXTURE_ID LoadTextureFromFile(const char *filename, bool gen_mips = true, bool is_srgb = false);
+    TEXTURE_ID LoadTextureFromMemory(void *pixels, int width, int height, int num_channels, 
+                                     bool gen_mips = true, bool is_srgb = false);
     void GenerateMips(TEXTURE_ID tex_id);
     void GenerateMips_UAV(TEXTURE_ID tex_id, bool is_srgb);
     void PanoToCubemap(TEXTURE_ID cubemap_texture, TEXTURE_ID pano_texture);

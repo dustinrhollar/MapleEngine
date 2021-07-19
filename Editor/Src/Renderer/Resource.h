@@ -59,6 +59,7 @@ struct ShaderResourceView
     {
         _resource = 0;
         _descriptor.Free();
+        _descriptor = {};
     }
     
     D3D12_CPU_DESCRIPTOR_HANDLE GetDescriptorHandle()
@@ -98,6 +99,7 @@ struct UnorderedAccessView
         _resource = 0;
         _counter_resource = 0;
         _descriptor.Free();
+        _descriptor = {};
     }
     
     D3D12_CPU_DESCRIPTOR_HANDLE GetDescriptorHandle()
@@ -109,56 +111,6 @@ struct UnorderedAccessView
     Resource            *_counter_resource;
     DescriptorAllocation _descriptor;
     
-};
-
-struct ConstantBuffer
-{
-    void Init(ID3D12Resource *resource)
-    {
-        _resource.Init(resource);
-        _size = _resource.GetResourceDesc().Width;
-    }
-    
-    void Free()
-    {
-        _resource.Free();
-        _size = 0;
-    }
-    
-    Resource _resource;
-    u64      _size;
-};
-
-struct ConstantBufferView
-{
-    void Init(ConstantBuffer *cb, u64 offset = 0)
-    {
-        ID3D12Device *d3d_device = device::GetDevice();
-        ID3D12Resource *rsrc = cb->_resource._handle;
-        
-        _cb = cb;
-        
-        D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-        cbv.BufferLocation = rsrc->GetGPUVirtualAddress() + offset;
-        cbv.SizeInBytes = memory_align(_cb->_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-        
-        _descriptor = device::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        d3d_device->CreateConstantBufferView(&cbv, _descriptor.GetDescriptorHandle());
-    }
-    
-    void Free()
-    {
-        _cb = 0;
-        _descriptor.Free();
-    }
-    
-    D3D12_CPU_DESCRIPTOR_HANDLE GetDescriptorHandle()
-    {
-        return _descriptor.GetDescriptorHandle();
-    }
-    
-    ConstantBuffer      *_cb;
-    DescriptorAllocation _descriptor;
 };
 
 #endif //_RESOURCE_H

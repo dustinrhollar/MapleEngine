@@ -179,13 +179,13 @@ CommandList::Reset()
     _resource_state_tracker.Reset();
     _upload_buffer.Reset();
     
-    ReleaseTrackedObjects();
-    
     for (u32 i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
     {
         _dynamic_descriptor_heap[i].Reset();
         _descriptor_heaps[i] = nullptr;
     }
+    
+    ReleaseTrackedObjects();
     
     _root_signature = 0;
     _pipeline_state = 0;
@@ -268,7 +268,7 @@ CommandList::SetRenderTarget(RenderTarget *render_target)
         {
             TransitionBarrier(texture->_resource._handle, D3D12_RESOURCE_STATE_RENDER_TARGET);
             rt_descriptors[descriptor_count++] = texture->GetRenderTargetView();
-            TrackResource(texture->_resource._handle);
+            //TrackResource(texture->_resource._handle);
         }
     }
     
@@ -280,7 +280,7 @@ CommandList::SetRenderTarget(RenderTarget *render_target)
     {
         TransitionBarrier(depth_texture->_resource._handle, D3D12_RESOURCE_STATE_DEPTH_WRITE);
         depth_handle = depth_texture->GetDepthStencilView();
-        TrackResource(depth_texture->_resource._handle);
+        //TrackResource(depth_texture->_resource._handle);
     }
     
     D3D12_CPU_DESCRIPTOR_HANDLE* dsv = depth_handle.ptr != 0 ? &depth_handle : nullptr;
@@ -350,8 +350,9 @@ CommandList::CopyResource(ID3D12Resource* dstRes, ID3D12Resource* srcRes)
     
     _handle->CopyResource(dstRes, srcRes);
     
-    TrackResource(dstRes);
-    TrackResource(srcRes);
+    // TODO(Dustin): Should one of these be garbage collected?
+    //TrackResource(dstRes);
+    //TrackResource(srcRes);
 }
 
 void 
@@ -386,13 +387,14 @@ CommandList::CopyTextureSubresource(TEXTURE_ID tex_id, u32 first_subresource, u3
         
         d3d::UpdateSubresources(_handle, dst_rsrc, iterim_rsrc, 0, first_subresource, num_subresources, subresources);
         
+        // Garbage collect the upload buffer
         TrackResource(iterim_rsrc);
-        TrackResource(dst_rsrc);
+        //TrackResource(dst_rsrc);
     }
 }
 
 TEXTURE_ID 
-CommandList::LoadTextureFromFile(const char *filename, bool gen_mipmaps)
+CommandList::LoadTextureFromFile(const char *filename, bool gen_mipmaps, bool is_srgb)
 {
     // TODO(Dustin):
     //- Is UINT Format what I want?
@@ -404,16 +406,22 @@ CommandList::LoadTextureFromFile(const char *filename, bool gen_mipmaps)
     int x, y, channels;
     unsigned char *data = stbi_load(filename, &x, &y, &channels, desired_channels);
     
-    TEXTURE_ID result = LoadTextureFromMemory(data, x, y, desired_channels, gen_mipmaps);
+    TEXTURE_ID result = LoadTextureFromMemory(data, x, y, desired_channels, gen_mipmaps, is_srgb);
     // NOTE(Dustin): This free might have to wait until the command list is done executing...
     stbi_image_free(data);
     return result;
 }
 
 TEXTURE_ID 
-CommandList::LoadTextureFromMemory(void *pixels, int width, int height, int num_channels, bool gen_mips)
+CommandList::LoadTextureFromMemory(void *pixels, int width, int height, int num_channels, bool gen_mips, bool is_srgb)
 {
-    D3D12_RESOURCE_DESC rsrc_desc = d3d::GetTex2DDesc(DXGI_FORMAT_R8G8B8A8_UNORM, width, height);
+    DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    if (is_srgb)
+    {
+        format = MakeSRGB(format);
+    }
+    
+    D3D12_RESOURCE_DESC rsrc_desc = d3d::GetTex2DDesc(format, width, height);
     
     TEXTURE_ID result = texture::Create(&rsrc_desc);
     assert(texture::IsValid(result));
@@ -767,7 +775,7 @@ CommandList::SetConstantBufferView(u32 root_param_idx, Resource *buffer,
         TransitionBarrier(buffer->_handle, stateAfter);
         _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageInlineCBV(root_param_idx, 
                                                                                         buffer->_handle->GetGPUVirtualAddress() + buffer_offset);
-        TrackResource(buffer->_handle);
+        //TrackResource(buffer->_handle);
     }
 }
 
@@ -783,7 +791,7 @@ CommandList::SetConstantBufferView(u32 root_param_idx, u32 descriptorOffset,
     if (constantBuffer)
     {
         TransitionBarrier(constantBuffer->_resource._handle, stateAfter);
-        TrackResource(constantBuffer->_resource._handle);
+        //TrackResource(constantBuffer->_resource._handle);
     }
     
     _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageDescriptors(root_param_idx, descriptorOffset, 1, cbv->GetDescriptorHandle());
@@ -801,7 +809,7 @@ CommandList::SetShaderResourceView(u32 root_param_idx, Resource *buffer,
         TransitionBarrier(buffer->_handle, after);
         _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageInlineSRV(root_param_idx, 
                                                                                         buffer->_handle->GetGPUVirtualAddress() + buffer_offset);
-        TrackResource(buffer->_handle);
+        //TrackResource(buffer->_handle);
     }
 }
 
@@ -830,7 +838,7 @@ CommandList::SetShaderResourceView(u32 rootParameterIndex, u32 descriptorOffset,
             TransitionBarrier(resource->_handle, stateAfter);
         }
         
-        TrackResource(resource->_handle);
+        //TrackResource(resource->_handle);
     }
     
     _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageDescriptors(rootParameterIndex, descriptorOffset, 1, srv->GetDescriptorHandle());
@@ -860,8 +868,7 @@ CommandList::SetShaderResourceView(i32 rootParameterIndex, u32 descriptorOffset,
             TransitionBarrier(resource->_handle, stateAfter);
         }
         
-        TrackResource(resource->_handle);
-        
+        //TrackResource(resource->_handle);
         _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageDescriptors(rootParameterIndex, descriptorOffset, 1, texture->GetShaderResourceView());
     }
 }
@@ -878,7 +885,7 @@ CommandList::SetUnorderedAccessView(u32 root_param_idx, Resource *buffer,
         TransitionBarrier(buffer->_handle, stateAfter);
         _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageInlineUAV(root_param_idx, 
                                                                                         buffer->_handle->GetGPUVirtualAddress() + buffer_offset);
-        TrackResource(buffer->_handle);
+        //TrackResource(buffer->_handle);
     }
 }
 
@@ -907,7 +914,7 @@ CommandList::SetUnorderedAccessView(u32 rootParameterIndex, u32 descriptorOffset
             TransitionBarrier(resource->_handle, stateAfter);
         }
         
-        TrackResource(resource->_handle);
+        //TrackResource(resource->_handle);
     }
     
     _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageDescriptors(rootParameterIndex, descriptorOffset, 1, uav->GetDescriptorHandle() );
@@ -938,7 +945,7 @@ CommandList::SetUnorderedAccessView(u32 rootParameterIndex, u32 descriptorOffset
             TransitionBarrier(resource->_handle, stateAfter);
         }
         
-        TrackResource(resource->_handle);
+        //TrackResource(resource->_handle);
         
         _dynamic_descriptor_heap[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].StageDescriptors(rootParameterIndex, descriptorOffset, 1, texture->GetUnorderedAccessView(mip));
     }
@@ -960,8 +967,8 @@ CommandList::ResolveSubresource(Resource* dst_resource, Resource* src_resource,
                                 src_resource->_handle, srcSubresource,
                                 dst_resource->GetResourceDesc().Format );
     
-    TrackResource(src_resource->_handle);
-    TrackResource(dst_resource->_handle);
+    //TrackResource(src_resource->_handle);
+    //TrackResource(dst_resource->_handle);
 }
 
 ID3D12Resource* 
@@ -1014,7 +1021,7 @@ CommandList::CopyBuffer(u64 bufferSize, const void* bufferData,
             TrackResource(uploadResource);
         }
         
-        TrackResource(result);
+        //TrackResource(result);
     }
     
     return result;
@@ -1047,7 +1054,7 @@ CommandList::SetVertexBuffers(u32 startSlot,
         if (vertexBuffers[i])
         {
             TransitionBarrier(vertexBuffers[i]->GetResource(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-            TrackResource(vertexBuffers[i]->GetResource());
+            //TrackResource(vertexBuffers[i]->GetResource());
             arrput(views, vertexBuffers[i]->_buffer_view);
         }
     }
@@ -1063,7 +1070,7 @@ CommandList::SetVertexBuffer(u32 slot, VertexBuffer* vertex_buffer )
     if (vertex_buffer)
     {
         TransitionBarrier(vertex_buffer->GetResource(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-        TrackResource(vertex_buffer->GetResource());
+        //TrackResource(vertex_buffer->GetResource());
         views[0] = vertex_buffer->_buffer_view;
     }
     
@@ -1091,7 +1098,6 @@ void CommandList::SetIndexBuffer(IndexBuffer* indexBuffer)
     if (indexBuffer)
     {
         TransitionBarrier(indexBuffer->GetResource(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
-        TrackResource(indexBuffer->GetResource());
         _handle->IASetIndexBuffer(&indexBuffer->_buffer_view);
     }
 }
@@ -1133,7 +1139,6 @@ void CommandList::SetComputeRootSignature(RootSignature *root_sig)
         }
         
         _handle->SetComputeRootSignature(_root_signature);
-        TrackObject(_root_signature);
     }
 }
 
@@ -1152,7 +1157,6 @@ void CommandList::SetGraphicsRootSignature(RootSignature *root_sig)
         }
         
         _handle->SetGraphicsRootSignature(_root_signature);
-        TrackObject(_root_signature);
     }
 }
 
@@ -1189,7 +1193,6 @@ CommandList::SetPipelineState(ID3D12PipelineState *pipeline_state)
     {
         _pipeline_state = pipeline_state;
         _handle->SetPipelineState(pipeline_state);
-        TrackObject(pipeline_state);
     }
 }
 
@@ -1293,14 +1296,59 @@ CommandList::TrackResource(ID3D12Resource *resource)
     TrackObject(resource);
 }
 
+void CommandList::DeleteResource(Resource *resource)
+{
+    TrackResource(resource->_handle);
+}
+
 void 
 CommandList::ReleaseTrackedObjects()
 {
     for (u32 i = 0; i < (u32)arrlen(_tracked_objects); ++i)
     {
         // NOTE(Dustin): Might not be what we want to do
-        //D3D_RELEASE(_tracked_objects[i]);
-        _tracked_objects[i] = nullptr;
+        D3D_RELEASE(_tracked_objects[i]);
+        //_tracked_objects[i] = nullptr;
     }
     arrsetlen(_tracked_objects, 0);
+}
+
+
+void
+CommandList::CopyConstantBuffer(ConstantBuffer *cb, u64 bufferSize, const void* bufferData)
+{
+    ID3D12Resource *resource = CopyBuffer(bufferSize, bufferData);
+    cb->Init(resource);
+}
+
+void
+CommandList::CopyByteAddressBuffer(ByteAddressBuffer *bab, u64 bufferSize, const void* bufferData)
+{
+    ID3D12Resource *resource = CopyBuffer(bufferSize, bufferData, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    bab->Init(resource);
+}
+
+void
+CommandList::CopyStructuredBuffer(StructuredBuffer *sb, u64 numElements, u64 elementSize, const void* bufferData)
+{
+    ID3D12Resource *resource = CopyBuffer(numElements * elementSize, bufferData, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    sb->Init(resource, numElements, elementSize);
+}
+
+void 
+CommandList::SetGraphicsDynamicConstantBuffer(u32 rootParameterIndex, u64 sizeInBytes, const void* bufferData)
+{
+    // Constant buffers must be 256-byte aligned.
+    auto heapAllococation = _upload_buffer.Allocate(sizeInBytes, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+    memcpy(heapAllococation.cpu, bufferData, sizeInBytes);
+    _handle->SetGraphicsRootConstantBufferView(rootParameterIndex, heapAllococation.gpu);
+}
+
+void 
+CommandList::SetGraphicsDynamicStructuredBuffer(u32 slot, u64 numElements, u64 elementSize, const void* bufferData)
+{
+    u64 bufferSize = numElements * elementSize;
+    auto heapAllocation = _upload_buffer.Allocate(bufferSize, elementSize);
+    memcpy(heapAllocation.cpu, bufferData, bufferSize);
+    _handle->SetGraphicsRootShaderResourceView(slot, heapAllocation.gpu);
 }

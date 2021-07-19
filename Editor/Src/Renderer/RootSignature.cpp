@@ -9,6 +9,10 @@ RootSignature::Init(UINT                             anumParameters,
     RenderError result = RenderError::Success;
     ID3D12Device *d3d_device = device::GetDevice();
     
+    memset(_num_descriptors_per_table, 0, sizeof(u32) * 32);
+    _sampler_table_bitmask = 0;
+    _descriptor_table_bitmask = 0;
+    
     // Create the root signature
     D3D12_FEATURE_DATA_ROOT_SIGNATURE FeatureData = {};
     FeatureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -112,6 +116,10 @@ RootSignature::Free()
 {
     RenderError result = RenderError::Success;
     if (_handle) D3D_RELEASE(_handle);
+    memset(_num_descriptors_per_table, 0, sizeof(u32) * 32);
+    _sampler_table_bitmask = 0;
+    _descriptor_table_bitmask = 0;
+    
     return result;
 }
 

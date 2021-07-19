@@ -46,7 +46,7 @@ RenderTarget::GetTexture(AttachmentPoint slot)
 void 
 RenderTarget::Resize(u32 width, u32 height)
 {
-    if (_width != width && _height != height)
+    if (_width != width || _height != height)
     {
         _width = width;
         _height = height;
