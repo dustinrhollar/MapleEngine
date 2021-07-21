@@ -16,7 +16,7 @@ namespace d3d_imgui
     
     static void Initialize(struct RenderTarget *render_target);
     static void Free();
-    static void Render(ImDrawData* draw_data, struct RenderTarget *render_target);
+    static void Render(ImDrawData* draw_data, struct CommandList *command_list, struct RenderTarget *render_target);
     
     // Viewport Implementation
     
@@ -149,9 +149,8 @@ d3d_imgui::Free()
 }
 
 static void
-d3d_imgui::Render(ImDrawData* draw_data, RenderTarget *render_target)
+d3d_imgui::Render(ImDrawData* draw_data, CommandList *command_list, RenderTarget *render_target)
 {
-    CommandList *command_list = RendererGetActiveCommandList();
     ImGuiIO&    io       = ImGui::GetIO();
     //ImDrawData* draw_data = ImGui::GetDrawData();
     
@@ -273,10 +272,7 @@ static void
 d3d_imgui::ViewportSetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ViewportData* data = (ViewportData*)viewport->RendererUserData;
-    
-    //CommandQueue *command_queue = data->_swapchain._present_queue;
     device::Flush();
-    
     data->_swapchain.Resize((u32)size.x, (u32)size.y);
 }
 
@@ -285,9 +281,9 @@ d3d_imgui::ViewportRenderWindow(ImGuiViewport* viewport, void*)
 {
     ViewportData* data = (ViewportData*)viewport->RendererUserData;
     
-    //CommandQueue *command_queue = device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-    //CommandList *command_list = command_queue->GetCommandList();
-    CommandList *command_list = RendererGetActiveCommandList();
+    CommandQueue *command_queue = device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    CommandList *command_list = command_queue->GetCommandList();
+    //CommandList *command_list = RendererGetActiveCommandList();
     
     ImGuiIO&    io       = ImGui::GetIO();
     ImDrawData* draw_data = ImGui::GetDrawData();
@@ -297,9 +293,9 @@ d3d_imgui::ViewportRenderWindow(ImGuiViewport* viewport, void*)
     r32 clear_color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     command_list->ClearTexture(render_target->GetTexture(AttachmentPoint::Color0), clear_color);
     
-    Render(viewport->DrawData, render_target);
+    Render(viewport->DrawData, command_list, render_target);
     
-    //command_queue->ExecuteCommandLists(&command_list, 1);
+    command_queue->ExecuteCommandLists(&command_list, 1);
 }
 
 static void 

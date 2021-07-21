@@ -41,3 +41,6 @@ fxc /nologo /Od /Zi /T ps_5_1 /FoHDRToSDR_Pxl.cso            Experimental/HDRToS
 
 fxc /nologo /Od /Zi /T vs_5_1 /FoHDRLighting_Vtx.cso         Experimental/HDRLighting_Vtx.hlsl
 fxc /nologo /Od /Zi /T ps_5_1 /FoHDRLighting_Pxl.cso         Experimental/HDRLighting_Pxl.hlsl
+
+fxc /nologo /Od /Zi /T vs_5_1 /FoPBR_Vtx.cso                 Experimental/PBR/PBR_Vtx.hlsl
+fxc /nologo /Od /Zi /T ps_5_1 /FoPBR_Pxl.cso                 Experimental/PBR/PBR_Pxl.hlsl

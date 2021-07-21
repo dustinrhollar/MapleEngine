@@ -778,6 +778,8 @@ editor::Render()
     }
     ImGui::End(); // TabTest
     
+    //ImGui::ShowDemoWindow();
+    
     // End imgui frame
     ImGui::Render();
 }

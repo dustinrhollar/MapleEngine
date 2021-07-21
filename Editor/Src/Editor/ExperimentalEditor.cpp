@@ -7,6 +7,7 @@ namespace experimental
 #include "Experimental/EnvironmentMapping.cpp"
 #include "Experimental/PhongLighting.cpp"
 #include "Experimental/HDR.cpp"
+#include "Experimental/PBR.cpp"
     
     // Scene List
     
@@ -26,9 +27,10 @@ namespace experimental
         { "Phong Lighting",      phong_lighting::OnRender,  phong_lighting::OnFree,  phong_lighting::GetViewportCamera,
             phong_lighting::OnDrawSceneData, phong_lighting::OnDrawSelectedObject },
         { "HDR", HDR::OnRender, HDR::OnFree, HDR::GetViewportCamera, HDR::OnDrawSceneData, HDR::OnDrawSelectedObject },
+        { "PBR", PBR::OnRender, PBR::OnFree, PBR::GetViewportCamera, PBR::OnDrawSceneData, PBR::OnDrawSelectedObject },
     };
     
-    static int g_active_scene_idx = 2;
+    static int g_active_scene_idx = 3;
     
     // Viewport Information
     

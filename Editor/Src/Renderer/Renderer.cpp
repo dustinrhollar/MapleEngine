@@ -76,6 +76,9 @@ static RendererCallbacks g_callbacks{};
 #include "Device.cpp"
 #include "RenderTarget.cpp"
 #include "ImGuiRenderer.cpp"
+
+#include "Geometry/Common.h"
+#include "Geometry/Sphere.cpp"
 #include "Geometry/Cube.cpp"
 
 static Swapchain           g_swapchain{};      // @INTERNAL

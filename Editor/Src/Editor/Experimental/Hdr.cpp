@@ -120,8 +120,6 @@ void HDR::OnInit(u32 width, u32 height)
     //-------------------------------------------------------------------------------------------//
     // Load Scene Geometry
     
-    // TODO(Dustin): Load geometry
-    
     CommandQueue *copy_queue = device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
     CommandList *command_list = copy_queue->GetCommandList();
     

@@ -1,11 +1,4 @@
 
-struct VertexPositionNormalTex
-{
-    v3 pos;
-    v3 norm;
-    v2 tex;
-};
-
 struct Cube
 {
     VertexBuffer vbuffer;
@@ -75,19 +68,7 @@ CreateCube(CommandList *command_list, r32 size, bool reverse_winding, bool inver
     
     if (reverse_winding)
     {
-        for (u16 i = 0; i < _countof(indices); i += 3)
-        {
-            u16 _x = indices[i];
-            u16 _y = indices[i+2];
-            
-            indices[i]   = _y;
-            indices[i+2] = _x;
-        }
-        
-        for (u32 i = 0; i < _countof(vertices); ++i)
-        {
-            vertices[i].tex.x = (1.0f - vertices[i].tex.x);
-        }
+        ReverseWinding(indices, _countof(indices), vertices, _countof(vertices));
     }
     
     command_list->CopyVertexBuffer(&result.vbuffer, _countof(vertices), sizeof(VertexPositionNormalTex), vertices);

@@ -8,6 +8,14 @@
 #define MM_PI 3.141592653589793238f 
 #endif
 
+#ifndef MM_2PI
+#define MM_2PI 2.0f*MM_PI
+#endif
+
+#ifndef MM_PIDIV2
+#define MM_PIDIV2 MM_PI/2.0f
+#endif
+
 typedef union
 {
     struct { i32 x, y; };

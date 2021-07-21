@@ -194,7 +194,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdSh
         editor::Render();
         
         // Draw into the current swapchain image
-        d3d_imgui::Render(ImGui::GetDrawData(), g_swapchain.GetRenderTarget());
+        d3d_imgui::Render(ImGui::GetDrawData(), RendererGetActiveCommandList(), g_swapchain.GetRenderTarget());
+        RendererEndFrame();
         
         // Update and Render additional Platform Windows
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -205,7 +206,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdSh
         
         // Present
         
-        RendererEndFrame();
         //RendererPresentFrame();
         
         // 5.6 Meet Framerate (?)
