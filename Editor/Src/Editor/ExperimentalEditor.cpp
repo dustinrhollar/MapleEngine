@@ -8,6 +8,7 @@ namespace experimental
 #include "Experimental/PhongLighting.cpp"
 #include "Experimental/HDR.cpp"
 #include "Experimental/PBR.cpp"
+#include "Experimental/IBL_DiffuseIrradiance.cpp"
     
     // Scene List
     
@@ -28,9 +29,11 @@ namespace experimental
             phong_lighting::OnDrawSceneData, phong_lighting::OnDrawSelectedObject },
         { "HDR", HDR::OnRender, HDR::OnFree, HDR::GetViewportCamera, HDR::OnDrawSceneData, HDR::OnDrawSelectedObject },
         { "PBR", PBR::OnRender, PBR::OnFree, PBR::GetViewportCamera, PBR::OnDrawSceneData, PBR::OnDrawSelectedObject },
+        { "IBL Diffuse", ibl_diffuse::OnRender, ibl_diffuse::OnFree, ibl_diffuse::GetViewportCamera, 
+            ibl_diffuse::OnDrawSceneData, ibl_diffuse::OnDrawSelectedObject },
     };
     
-    static int g_active_scene_idx = 3;
+    static int g_active_scene_idx = 4;
     
     // Viewport Information
     

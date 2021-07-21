@@ -29,19 +29,31 @@ run.bat
 ```
 
 ## Active Task List
+
+Rendering
 - [x] Base Rendering Architecture
 - [x] ImGui Platform & Rendering Layer
+- [x] Experimental Window for graphics testing
+- [x] PBR support 
+- [ ] Shadow mapping support
+- [ ] IBL & GI support 
+
+Terrain Generation
 - [x] Basic Editor supporting Node Graph and Terrain Generation
 - [x] Viewport Camera controls
-- [x] Triangle Strip based mesh generation
+- [x] Triangle Strip mesh generation
 - [ ] Alternative mesh generation approaches (Low poly, Geo Clipping, TIN) 
 - [x] Compute support for Perlin and Simplex noise algorithms
 - [ ] Compute support for other noise algorithms (Worley, Turbulence, etc.)
-- [x] Experimental Window for graphics testing
-- [ ] PBR support for terrain materials
 - [ ] Node Graph system for terrain generation
 - [ ] Material editor
 
+Asset Pipeline 
+- [ ] Win32 File Manager
+- [ ] Asset Manager
+- [ ] Terrain file format
+- [ ] Scene file format + generator
+- [ ] glTF 2.0 mesh loading
 
 ## Showcase
 

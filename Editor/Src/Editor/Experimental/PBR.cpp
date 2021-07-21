@@ -107,23 +107,23 @@ namespace PBR
     // Scene Geometry
     
 #if defined(PBR_USE_TEXTURES)
-    static i32                g_nr_rows = 1;
-    static i32                g_nr_cols = 1;
+    static i32               g_nr_rows = 1;
+    static i32               g_nr_cols = 1;
 #else
-    static i32                g_nr_rows = 7;
-    static i32                g_nr_cols = 7;
+    static i32               g_nr_rows = 7;
+    static i32               g_nr_cols = 7;
 #endif
     
-    static r32                g_sphere_spacing = 2.5;
+    static r32               g_sphere_spacing = 2.5;
     
-    Sphere                   *g_spheres = 0;
-    m4                       *g_models = 0;
-    Material                 *g_materials = 0;
-    LightProperties           g_light_prop = {};
-    PointLight               *g_point_lights = 0;
+    static Sphere            *g_spheres = 0;
+    static m4                *g_models = 0;
+    static Material          *g_materials = 0;
+    static LightProperties    g_light_prop = {};
+    static PointLight        *g_point_lights = 0;
     
-    RootSignature             g_pbr_signature;
-    PipelineStateObject       g_pbr_pso;
+    static RootSignature       g_pbr_signature;
+    static PipelineStateObject g_pbr_pso;
     
     // Render Target
     static bool               g_render_msaa = true;
@@ -134,7 +134,7 @@ namespace PBR
     static TEXTURE_ID         g_depth_texture             = INVALID_TEXTURE_ID;
     static RenderTarget       g_render_target             = {};
     
-    ViewportCamera g_camera;
+    static ViewportCamera     g_camera;
     
     static bool g_is_active = false;
     
