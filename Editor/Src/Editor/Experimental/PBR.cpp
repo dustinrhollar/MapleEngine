@@ -1,6 +1,8 @@
 
 namespace PBR
 {
+#define PBR_USE_TEXTURES
+    
     namespace PBR_RP
     {
         enum
@@ -104,8 +106,14 @@ namespace PBR
     
     // Scene Geometry
     
+#if defined(PBR_USE_TEXTURES)
     static i32                g_nr_rows = 1;
     static i32                g_nr_cols = 1;
+#else
+    static i32                g_nr_rows = 7;
+    static i32                g_nr_cols = 7;
+#endif
+    
     static r32                g_sphere_spacing = 2.5;
     
     Sphere                   *g_spheres = 0;
@@ -150,7 +158,7 @@ void PBR::OnInit(u32 width, u32 height)
     CommandQueue *copy_queue = device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
     CommandList *command_list = copy_queue->GetCommandList();
     
-#if 0
+#if !defined(PBR_USE_TEXTURES)
     v4 light_positions[] = {
         {-10.0f,  10.0f, 10.0f, 1.0f },
         { 10.0f,  10.0f, 10.0f, 1.0f },
@@ -187,19 +195,26 @@ void PBR::OnInit(u32 width, u32 height)
         material.ao = 1.0f;
         material.metallic = (r32)row / (r32)g_nr_rows;
         material.f0 = 0.04f; // surface reflection at zero incidence (IoR)
+#if defined(PBR_USE_TEXTURES)
         material.has_texture = 
             TextureMap::Albedo|
             TextureMap::Normal|
             //TextureMap::Metallic|
             TextureMap::Roughness|
             TextureMap::AO;
+#else
+        material.has_texture = 0;
+#endif
         
         for (int col = 0; col < g_nr_cols; ++col) 
         {
             // we clamp the roughness to 0.05 - 1.0 as perfectly smooth surfaces (roughness of 0.0) tend to look a bit off
             // on direct lighting.
-            //material.roughness = fast_clampf(0.05f, 1.0f, (r32)col / (r32)g_nr_cols);
+#if defined(PBR_USE_TEXTURES)
             material.roughness = 1.0f;
+#else
+            material.roughness = fast_clampf(0.05f, 1.0f, (r32)col / (r32)g_nr_cols);
+#endif
             
             m4 model = m4_translate({
                                         (col - (g_nr_cols / 2)) * g_sphere_spacing, 
@@ -214,11 +229,13 @@ void PBR::OnInit(u32 width, u32 height)
     }
     
     // Load textures
+#if defined(PBR_USE_TEXTURES)
     g_albedo    = command_list->LoadTextureFromFile(g_albedo_file,    true, true);
     g_normal    = command_list->LoadTextureFromFile(g_normal_file,    true, true);
     g_metallic  = command_list->LoadTextureFromFile(g_metallic_file,  true, true);
     g_roughness = command_list->LoadTextureFromFile(g_roughness_file, true, true);
     g_ao        = command_list->LoadTextureFromFile(g_ao_file,        true, true);
+#endif
     
     copy_queue->ExecuteCommandLists(&command_list, 1);
     
@@ -426,11 +443,19 @@ void PBR::OnRender(CommandList *command_list, v2 dims)
                                                      sizeof(g_point_lights[0]), g_point_lights);
     
     // Bind textures
+#if defined(PBR_USE_TEXTURES)
     command_list->SetShaderResourceView(PBR_RP::Textures, 0, g_albedo,    D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     command_list->SetShaderResourceView(PBR_RP::Textures, 1, g_normal,    D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     command_list->SetShaderResourceView(PBR_RP::Textures, 2, g_metallic,  D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     command_list->SetShaderResourceView(PBR_RP::Textures, 3, g_roughness, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     command_list->SetShaderResourceView(PBR_RP::Textures, 4, g_ao,        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+#else
+    command_list->SetShaderResourceView(PBR_RP::Textures, 0, &g_null_srv, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    command_list->SetShaderResourceView(PBR_RP::Textures, 1, &g_null_srv, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    command_list->SetShaderResourceView(PBR_RP::Textures, 2, &g_null_srv, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    command_list->SetShaderResourceView(PBR_RP::Textures, 3, &g_null_srv, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    command_list->SetShaderResourceView(PBR_RP::Textures, 4, &g_null_srv, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+#endif
     
     // Draw scene geometry!
     
