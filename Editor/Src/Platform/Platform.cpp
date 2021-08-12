@@ -26,6 +26,7 @@
 #include "Win32/Win32Timer.cpp"
 #include "Win32/Win32Logger.cpp"
 #include "Win32/Win32File.cpp"
+#include "Win32/Win32FileManager.cpp"
 #include "Win32/Win32CoreUtils.cpp"
 #include "Win32/Win32ThreadPool.cpp"
 //#include "Win32/Win32DllEntry.cpp"

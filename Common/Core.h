@@ -21,6 +21,11 @@
 
 #define ARRAYCOUNT(x) (sizeof(x) / sizeof(x[0]))
 
+// Determine the endian-ness of the machine
+#define LITTLE_ENDIAN 0x41424344UL 
+#define ENDIAN_ORDER  ('ABCD') 
+#define IS_LITTLE_ENDIAN (ENDIAN_ORDER==LITTLE_ENDIAN)
+
 typedef int8_t    i8;
 typedef int16_t   i16;
 typedef int32_t   i32;
@@ -47,6 +52,10 @@ typedef union u128
     i64 Bits[2];
 } u128;
 
+// Help Stringify paramters passed to macros
+#define STRING2(x) #x
+#define STRING(x) STRING2(x)
+
 // Defines for calculating size
 #define _KB(x) (x * 1024)
 #define _MB(x) (_KB(x) * 1024)
@@ -67,7 +76,7 @@ typedef union u128
 #define memory_align(val, alignment) (((alignment) + (val) - 1) & ~((alignment) - 1))
 #define divide_align(val, align) (((val) + (align) - 1) / (align))
 
-#define BIT(x) 1<<(x)
+#define BIT(x) 1ULL<<(x)
 
 #define BIT_TOGGLE(n, b, v) ((n) = ((n) & ~(1 << (b))) | ((v) << (b)))
 #define BIT32_TOGGLE_0(n ,b) BIT_TOGGLE(n, b, 0)

@@ -137,7 +137,7 @@ void* memory_alloc(memory_t Memory, u64 Size)
         }
         else {
             // TODO(Dustin): Log
-            LogFatal("Requesting more memory than is available!\n");
+            LogWarn("Requesting more memory than is available!\n");
         }
     }
     
@@ -186,7 +186,7 @@ void* memory_realloc(memory_t Memory, void *Ptr, u64 Size)
 void memory_release(memory_t Memory, void *Ptr)
 {
     if (!Ptr) return;
-    
+
     header_t Header = (header_t)mem_to_header(Ptr);
     
     if (!Header->Used)

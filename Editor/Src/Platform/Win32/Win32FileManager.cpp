@@ -1,145 +1,6 @@
 
-typedef u64 FILE_STR_ID; 
-constexpr u16 MAX_WIN32_FILE_POOL_COUNT = 256;
-constexpr u16 MAX_WIN32_FILE_PER_POOL_COUNT = 255;
-constexpr u16 WIN32_BIT_MASK_COUNT = memory_align(MAX_WIN32_FILE_PER_POOL_COUNT, 64) / 64;
-
-//
-// A file id is a mask that can locate the file within the
-// Win32FilePool data structure. An Win32FileManager instance will
-// contain *at most* 256 Win32FilePools, each with the capacity
-// of 256 files. This allows for up to 65,536 files for a single
-// instance assetsys. 
-//
-// A file id is a mask for the major and minor pool index.
-// A major pool index is the index in the file pool array
-// whereas the minor pool index is the index into the file array
-// inside a pool. The lower 8 bits of the file id are the major 
-// pool index and the upper 8 bits are the minor pool index.
-//
-union FILE_ID
-{
-    struct { u8 major, minor; } _p;
-    u16 mask;
-};
-constexpr FILE_ID INVALID_FID = {255,255};
-
-enum class Win32FileType
-{
-    Volume = 0,
-    Directory,
-    Compressed,
-    File,
-    
-    Count,
-    Unknown = Count, // used for checking if file is initialized
-};
-
-enum class Win32FileMode
-{
-    Read,
-    Write,
-    ReadWrite,
-    Append,
-    
-    Count,
-    Unknown = Count, 
-};
-
-struct Win32File
-{
-    // Name information
-    FILE_STR_ID physical_name; // abs path,    , ex. "C:\some_dir\maple-merchant\shaders\internal\file.vert"
-    Win32FileType type;
-    bool          is_meta;
-    FILE_ID       fid;
-    FILE_ID       parent;
-    FILE_ID      *child_files;   //stb_array
-};
-
-struct Win32FilePair
-{
-    FILE_ID     file;
-    FILE_ID     meta;
-    FILE_STR_ID virtual_name;
-    MAPLE_GUID  guid;
-};
-
-struct Win32Mount
-{
-    FILE_STR_ID    name; // virtual name for the mount point
-    FILE_ID        fid;  // root file for the mount
-    
-    Win32FilePair *by_name_lookup;
-    Win32FilePair *by_guid_lookup;
-};
-
-enum class FileInfoType : u8 
-{
-	AsFile, // file info as filepath
-    AsGuid, // file info as GUID
-    AsName, // file info as virtual name
-    
-    Count,
-    Unknown = Count,
-};
-
-// Files are allocated from a File Pool.
-struct Win32FilePool
-{
-    static const u16 MAX_POOL_COUNT = 256;
-    static const u16 MAX_FILE_COUNT = 255;
-    
-    Win32File *handles;
-    u32   allocated_files;
-    // The number of required u64s is dependent on the number
-    // of allowed files in the Pool. For example, if we have a
-    // Pool with a max of 256 files should have 4 u64s to have a
-    // mask for all files. Likewise, a Pool with 250 files should
-    // also have 4 u64s.
-    u64   allocation_mask[WIN32_BIT_MASK_COUNT];
-};
-
-struct Win32FileManager
-{
-    StrPool         str_pool;
-    Win32FilePool  *file_pools;   // stb array
-    Win32Mount     *mount_points; // stb array
-    STR_POOL_ID     root_path;    // NOTE(Dustin): Is this needed anymore?
-};
-
-struct FileInfo
-{
-	FileInfoType type;
-    
-    u8 is_relative:1; // is the filename a relative path to mount? 1: yes, 0: no
-    u8 is_meta:1;     // is this a meta file? 1: yes, 0: no
-    u8 pad0:6;        // what to put here in the future?
-    
-	union {
-		struct {
-			const char *filename;
-			const char *mount;
-        } _as_file;
-        
-		struct {
-			MAPLE_GUID  guid;
-			const char *mount;
-		} _as_guid;
-        
-		struct {
-			const char *virtual_name;
-			const char *mount;
-		} _as_virtual;
-	} _p;
-};
-
-
-FORCE_INLINE b8
-IsFileIdValid(FILE_ID id)
-{
-    return (id.mask != INVALID_FID.mask);
-}
+//-----------------------------------------------------------------------------------------------//
+// External API
 
 FORCE_INLINE bool
 operator==(FILE_ID left, FILE_ID right)
@@ -147,96 +8,363 @@ operator==(FILE_ID left, FILE_ID right)
     return left.mask == right.mask;
 }
 
-file_global Win32FileManager g_file_manager;
-
-file_internal void Win32FileManagerInit(const char *root);
-file_internal void Win32FileManagerFree();
-
-file_internal void Win32FilePoolInit(Win32FilePool *pool);
-file_internal void Win32FilePoolFree(Win32FilePool *pool);
-file_internal void Win32FilePoolAlloc(Win32FilePool *pool, Win32File **File);
-file_internal void Win32FilePoolRelease(Win32FilePool *pool, FILE_ID fid);
-
-file_internal void 
-Win32FilePoolInit(Win32FilePool *pool)
+FORCE_INLINE bool
+operator!=(FILE_ID left, FILE_ID right)
 {
-    pool->handles = 0;
-    arrsetcap(pool->handles, MAX_WIN32_FILE_PER_POOL_COUNT);
-    pool->allocated_files = 0;
-    
-#if 0
-    for (u32 i = 0; i < arrlen(pool->handles); ++i)
-        pool->handles[i] = File::Invalid();
-#endif
-    
-    u32 mask_ints = WIN32_BIT_MASK_COUNT;
-    for (u32 i = 0; i < mask_ints; ++i)
-        pool->allocation_mask[i] = 0;
+    return left.mask != right.mask;
 }
 
-file_internal void 
-Win32FilePoolFree(Win32FilePool *pool)
-{
-    arrfree(pool->handles);
-    pool->allocated_files = 0;
-}
+//-----------------------------------------------------------------------------------------------//
 
-file_internal void 
-Win32FilePoolAlloc(Win32FilePool *pool, Win32File **file)
+#include <fileapi.h>
+
+namespace file_manager
 {
-    *file = 0;
+    // TODO(Dustin): Synchronization
     
-    // Early out: don't bother allocating a file if the pool is full
-    if (pool->allocated_files + 1 >= arrlen(pool->handles)) return;
-    
-    u32 mask_ints = WIN32_BIT_MASK_COUNT;
-    u64 bitset;
-    for (u32 i = 0; i < mask_ints; ++i)
+    struct FileKeyValue
     {
-        // Negate the particular bitset. Ctz will find the first
-        // 1 starting from the the least significant digit. However,
-        // for the purposes of this bitlist, a 1 means an allocation,
-        // but we want to find unallocated blocks. Negating the bitset will
-        // set all allocated blocks to 0 and unallocated blocks to 1.
-        // The found idx is the index of the block we want to retrieve
-        // for the allocation.
-        bitset = ~pool->allocation_mask[i];
-        
-        // Ctz() is undefined when the number == 0
-        // If the negated bitset == 0, then there are
-        // no available allocations in the block.
-        // If there are no allocations, then go to the
-        // next bitset.
-        u32 idx = 0;
-        u32 bit = 0;
-        if (bitset)
+        u128    key;   // Hash value of a string
+        FILE_ID value; // FILE_ID for this particular file
+    };
+    
+    struct PlatformFilePoolPage
+    {
+        void       *backing;
+        PlatformFile **free_list;
+    };
+    
+    struct PlatformFilePool
+    {
+        u32                count_per_page;
+        PlatformFilePoolPage *page_list;
+    };
+    
+    struct FileMount
+    {
+        Str           name;       // virtual name for the mount point
+        FILE_ID       fid;        // root file for the mount
+        FileKeyValue *file_table; // hashtable lookup for file ids
+    };
+    
+    static PlatformFilePool  g_file_pool;
+    static FileMount        *g_mounts = 0;
+    
+    // File Pool Page Interface
+    static void PlatformFilePoolPageInit(PlatformFilePoolPage *page, u32 count_per_page);
+    static void PlatformFilePoolPageFree(PlatformFilePoolPage *page);
+    static PlatformFile* PlatformFilePoolPageAlloc(PlatformFilePoolPage *page);
+    static void PlatformFilePoolPageRelease(PlatformFilePoolPage *page, PlatformFile *file);
+    
+    // File Pool Interface
+    static void PlatformFilePoolInit(PlatformFilePool *pool, u32 count_per_page);
+    static void PlatformFilePoolFree(PlatformFilePool *pool);
+    FORCE_INLINE PlatformFile* OffsetToPlatformFile(PlatformFilePoolPage *page, u32 offset);
+    FORCE_INLINE u32 PlatformFileToOffset(PlatformFilePoolPage *page, PlatformFile *file);
+    static PlatformFile* PlatformFilePoolAlloc(PlatformFilePool *pool);
+    static PlatformFile* PlatformFilePoolGetFile(PlatformFilePool *pool, FILE_ID fid);
+    
+    // File Mount interface
+    static void MountFile(const char *virtual_name, const char *path);
+    
+    // File Manager Interface
+    static void Init();
+    
+};
+
+static void 
+file_manager::PlatformFilePoolPageInit(PlatformFilePoolPage *page, u32 count_per_page)
+{
+    page->backing   = PlatformVirtualAlloc(count_per_page * sizeof(PlatformFile));
+    page->free_list = (PlatformFile**)page->backing;
+    
+    // initialize the free list.
+    PlatformFile **iter = page->free_list;
+    for (u32 i = 0; i < count_per_page - 1; ++i)
+    {
+        *iter = (PlatformFile*)iter + 1;
+        iter = (PlatformFile**)(*iter);
+    }
+    *iter = nullptr;
+}
+
+static void 
+file_manager::PlatformFilePoolPageFree(PlatformFilePoolPage *page)
+{
+    PlatformVirtualFree(page->backing);
+    page->backing = 0;
+    page->free_list = 0;
+}
+
+static PlatformFile* 
+file_manager::PlatformFilePoolPageAlloc(PlatformFilePoolPage *page)
+{
+    if (!page->free_list) return 0;
+    
+    PlatformFile *result = (PlatformFile*)page->free_list;
+    page->free_list = (PlatformFile**)(*page->free_list);
+    return result;
+}
+
+static void 
+file_manager::PlatformFilePoolPageRelease(PlatformFilePoolPage *page, PlatformFile *file)
+{
+    *((PlatformFile**)file) = (PlatformFile*)page->free_list;
+    page->free_list = (PlatformFile**)file;
+}
+
+static void 
+file_manager::PlatformFilePoolInit(PlatformFilePool *pool, u32 count_per_page)
+{
+    pool->count_per_page = count_per_page;
+    pool->page_list = 0;
+}
+
+static void 
+file_manager::PlatformFilePoolFree(PlatformFilePool *pool)
+{
+    for (u32 i = 0; i < (u32)arrlen(pool->page_list); ++i)
+    {
+        PlatformFilePoolPageFree(pool->page_list + i);
+    }
+    
+    arrfree(pool->page_list);
+}
+
+FORCE_INLINE PlatformFile*
+file_manager::OffsetToPlatformFile(PlatformFilePoolPage *page, u32 offset)
+{
+    u64 real_offset = sizeof(PlatformFile) * offset;
+    return (PlatformFile*)((char*)page->backing + real_offset);
+}
+
+FORCE_INLINE u32
+file_manager::PlatformFileToOffset(PlatformFilePoolPage *page, PlatformFile *file)
+{
+    return (u32)(((char*)file - (char*)page->backing) / sizeof(PlatformFile));
+}
+
+static PlatformFile* 
+file_manager::PlatformFilePoolAlloc(PlatformFilePool *pool)
+{
+    PlatformFile *result = 0;
+    
+    for (u32 i = 0; i < (u32)arrlen(pool->page_list); ++i)
+    {
+        PlatformFilePoolPage *page = pool->page_list + i;
+        result = PlatformFilePoolPageAlloc(page);
+        if (result) 
         {
-            bit = PlatformCtzl(bitset);
-            idx = i * 64 + bit;
-            BIT64_TOGGLE_1(pool->allocation_mask[i], bit);
-            
-            *file = pool->handles + idx;
-            (*file)->fid._p.minor = idx;
-            ++pool->allocated_files;
-            
+            *result = {};
+            result->fid.offset = PlatformFileToOffset(page, result);
+            result->fid.index  = i;
             break;
         }
     }
-}
-
-file_internal void 
-Win32FilePoolRelease(Win32FilePool *pool, FILE_ID fid)
-{
     
+    if (!result)
+    {
+        PlatformFilePoolPage page = {};
+        PlatformFilePoolPageInit(&page, pool->count_per_page);
+        result = PlatformFilePoolPageAlloc(&page);
+        
+        arrput(pool->page_list, page);
+    }
+    
+    return result;
 }
 
-file_internal void 
-Win32FileManagerInit(const char *root)
+static PlatformFile*
+file_manager::PlatformFilePoolGetFile(PlatformFilePool *pool, FILE_ID fid)
 {
+    PlatformFilePoolPage *page = pool->page_list + fid.index;
+    PlatformFile *result = OffsetToPlatformFile(page, fid.offset);
+    return result;
 }
 
-
-file_internal void 
-Win32FileManagerFree()
+static void
+file_manager::Init()
 {
+    g_mounts = 0;
+    PlatformFilePoolInit(&g_file_pool, 255);
+}
+
+// TODO(Dustin): Free version
+
+static void
+file_manager::MountFile(const char *virtual_name, const char *path)
+{
+    FileKeyValue *file_table;
+    FileMount mount = {};
+    
+    PlatformFile* mount_file = PlatformFilePoolAlloc(&g_file_pool);
+    Assert(mount_file);
+    
+    // Root file for the mount
+    mount_file->parent_fid = INVALID_FID;
+    
+    // For the mount file...
+    // Physical Path: C:\some\path\project\
+    // Relative Path: \
+
+    // Normalize the path, and create search string
+    Str physical_path = PlatformNormalizePath(path);
+    Str relative_path = StrInit(0);
+    
+    mount_file->physical_name = physical_path;
+    mount_file->relative_name = relative_path;
+    
+    PlatformFile **directory_queue = 0;
+    arrput(directory_queue, mount_file);
+    
+    while (arrlen(directory_queue) > 0)
+    {
+        PlatformFile *iter = directory_queue[0];
+        arrdel(directory_queue, 0);
+        
+        physical_path = iter->physical_name;
+        relative_path = iter->relative_name;
+        
+        Str search_regex = StrAdd(&physical_path, "/*", 2);
+        
+        WIN32_FIND_DATA find_file_data;
+        HANDLE handle = FindFirstFileExA(StrGetString(&search_regex), FindExInfoStandard, &find_file_data,
+                                         FindExSearchNameMatch, NULL, 0);
+        Assert(handle != INVALID_HANDLE_VALUE);
+        
+        do
+        {
+            if (strcmp(find_file_data.cFileName, ".") != 0 &&
+                strcmp(find_file_data.cFileName, "..") != 0 &&
+                find_file_data.cFileName[0] != '.' ) // don't allow hidden files or folders
+            {
+                // Build relative path
+                Str child_relative_path;
+                {
+                    u64 offset = 0;
+                    char *child_relative_path_ptr;
+                    
+                    if (StrLen(&relative_path) > 0)
+                    {
+                        child_relative_path = StrInit(1 + strlen(find_file_data.cFileName) + StrLen(&relative_path));
+                        child_relative_path_ptr = StrGetString(&child_relative_path);
+                        
+                        memcpy(child_relative_path_ptr + offset, StrGetString(&relative_path), StrLen(&relative_path));
+                        offset += StrLen(&relative_path);
+                        
+                        child_relative_path_ptr[offset++] = '/';
+                    }
+                    else
+                    {
+                        child_relative_path = StrInit(strlen(find_file_data.cFileName));
+                        child_relative_path_ptr = StrGetString(&child_relative_path);
+                    }
+                    
+                    memcpy(child_relative_path_ptr + offset, find_file_data.cFileName, strlen(find_file_data.cFileName));
+                }
+                
+                // Build physical path
+                Str child_physical_path = StrInit(1 + StrLen(&physical_path) + strlen(find_file_data.cFileName));
+                {
+                    u64 offset = 0;
+                    char *child_physical_path_ptr = StrGetString(&child_physical_path);
+                    
+                    memcpy(child_physical_path_ptr + offset, StrGetString(&physical_path), StrLen(&physical_path));
+                    offset += StrLen(&physical_path);
+                    
+                    child_physical_path_ptr[offset++] = '/';
+                    
+                    memcpy(child_physical_path_ptr + offset, find_file_data.cFileName, strlen(find_file_data.cFileName));
+                }
+                
+                PlatformFile* file = PlatformFilePoolAlloc(&g_file_pool);
+                file->physical_name = child_physical_path;
+                file->relative_name = child_relative_path;
+                file->parent_fid = iter->fid;
+                
+                BY_HANDLE_FILE_INFORMATION file_info;
+                BOOL Err = GetFileAttributesEx(StrGetString(&child_physical_path),
+                                               GetFileExInfoStandard,
+                                               &file_info);
+                Assert(Err);
+                
+                if (file_info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                {
+                    file->type = FileType::Directory;
+                    arrput(directory_queue, file);
+                }
+                else 
+                {
+                    file->type = FileType::File;
+                }
+                
+                arrput(iter->child_fids, file->fid);
+                
+                //LogInfo("Loading file...\n\tPhysical Path: %s\n\tRelative Path: %s\n", 
+                //StrGetString(&file->physical_name), StrGetString(&file->relative_name));
+            }
+        }
+        while (FindNextFileA(handle, &find_file_data) != 0);
+        
+        FindClose(handle);
+        StrFree(&search_regex);
+    }
+    
+    arrfree(directory_queue);
+    
+    // For funsies, let's walk the directories
+    FILE_ID *walk_queue = 0;
+    arrput(walk_queue, mount_file->fid);
+    
+#if 0
+    while (arrlen(walk_queue) > 0)
+    {
+        FILE_ID fid = walk_queue[0];
+        arrdel(walk_queue, 0);
+        
+        PlatformFile *file = PlatformFilePoolGetFile(&g_file_pool, fid);
+        Assert(file);
+        
+        LogInfo("File Data:\n\tPhysical Path: %s\n\tRelative Path: %s\n",
+                StrGetString(&file->physical_name), StrGetString(&file->relative_name));
+        
+        for (u32 i = 0; i < (u32)arrlen(file->child_fids); ++i)
+            arrput(walk_queue, file->child_fids[i]);
+    }
+#endif
+    
+    mount.name = StrInit(strlen(virtual_name), virtual_name);
+    mount.fid = mount_file->fid;
+    
+    arrput(g_mounts, mount);
+}
+
+static void 
+PlatformMountFile(const char *virtual_name, const char *path)
+{
+    file_manager::MountFile(virtual_name, path);
+}
+
+static PlatformFile* 
+PlatformGetFile(FILE_ID fid)
+{
+    Assert(PlatformIsValidFid(fid));
+    return file_manager::PlatformFilePoolGetFile(&file_manager::g_file_pool, fid);
+}
+
+static FILE_ID
+PlatformGetMountFile(const char *virtual_name)
+{
+    FILE_ID result = INVALID_FID;
+    
+    for (u32 i = 0; i < (u32)arrlen(file_manager::g_mounts); ++i)
+    {
+        if (strcmp(StrGetString(&file_manager::g_mounts[i].name), virtual_name) == 0)
+        {
+            result = file_manager::g_mounts[i].fid;
+            break;
+        }
+    }
+    
+    return result;
 }

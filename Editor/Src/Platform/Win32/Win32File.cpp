@@ -27,17 +27,16 @@ PlatformError PlatformCreateDirectory(const char *abs_path)
 
 Str PlatformGetFullExecutablePath()
 {
-    char buf[MAX_PATH];
+    char buf[MAX_PATH]; // hmmm, max_path usage...
     if (GetCurrentDirectory(MAX_PATH, buf) > MAX_PATH) return {};
     for (u32 i = 0; buf[i]; ++i) if (buf[i] == '\\') buf[i] = '/';
     
-    Str result;
-    str_init(&result, buf, (u32)strlen(buf));
+    Str result = StrInit((u32)strlen(buf), buf);
     return result;
 }
 
-// TODO(Matt): Make a better string type.
-PlatformErrorType PlatformReadFileToBuffer(const char* file_path, u8** buffer, u32* size)
+PlatformErrorType 
+PlatformReadFileToBuffer(const char* file_path, u8** buffer, u32* size)
 {
     PlatformErrorType result = PlatformError_Success;
     
@@ -78,7 +77,8 @@ PlatformErrorType PlatformReadFileToBuffer(const char* file_path, u8** buffer, u
     return result;
 }
 
-PlatformErrorType PlatformWriteBufferToFile(const char* file_path, u8* buffer, u64 size, bool append)
+PlatformErrorType 
+PlatformWriteBufferToFile(const char* file_path, u8* buffer, u64 size, bool append)
 {
     PlatformErrorType result = PlatformError_Success;
     Str long_path = PlatformNormalizePath(file_path);
@@ -86,11 +86,11 @@ PlatformErrorType PlatformWriteBufferToFile(const char* file_path, u8* buffer, u
     HANDLE handle = 0;
     if (append)
     {
-        handle = CreateFileA(str_to_string(&long_path), GENERIC_WRITE, 0, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+        handle = CreateFileA(StrGetString(&long_path), GENERIC_WRITE, 0, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
     }
     else
     {
-        handle = CreateFileA(str_to_string(&long_path), GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
+        handle = CreateFileA(StrGetString(&long_path), GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, 0);
         
         //if (handle == INVALID_HANDLE_VALUE)
         //{
@@ -120,13 +120,13 @@ PlatformErrorType PlatformWriteBufferToFile(const char* file_path, u8* buffer, u
     return result;
 }
 
-static Str Win32GetExeFilepath()
+static Str 
+Win32GetExeFilepath()
 {
     char buf[MAX_PATH];
     if (GetCurrentDirectory(MAX_PATH, buf) > MAX_PATH) 
     {
-        Str result;
-        str_init(&result, 0, 0);
+        Str result = {};
         return result;
     }
     
@@ -136,39 +136,45 @@ static Str Win32GetExeFilepath()
     if (buf[buf_len-1] != '/') buf[buf_len++] = '/';
     buf[buf_len] = 0;
     
-    Str result;
-    str_init(&result, buf, buf_len);
+    Str result = StrInit(buf_len, buf);
     return result;
 }
 
-static Str PlatformNormalizePath(const char* path)
+static Str 
+PlatformNormalizePath(const char* path)
 {
     // If the string is null or has length < 2, just return an empty one.
     if (!path || !path[0] || !path[1]) 
     {
-        Str err;
-        str_init(&err, 0, 0);
+        Str err = {};
         return err;
     }
     
     // Start with our relative path appended to the full executable path.
+    // TODO(Dustin): Don't do this in the long run. Let the caller set this up.
+#if 0
     Str exe_path = Win32GetExeFilepath();
     
-    Str result;
-    str_add_string(&result, &exe_path, path, (u32)strlen(path));
+    Str result = StrAdd(&exe_path, path, (u32)strlen(path));
+#else
     
-    char *tmp = str_to_string(&result);
+    Str result = StrInit((u32)strlen(path), path);
+    
+#endif
+    
+    char *tmp = StrGetString(&result);
+    u64 result_len = StrLen(&result);
     
     // Swap any back slashes for forward slashes.
-    for (u32 i = 0; i < (u32)result.len; ++i) if (tmp[i] == '\\') tmp[i] = '/';
+    for (u32 i = 0; i < (u32)result_len; ++i) if (tmp[i] == '\\') tmp[i] = '/';
     
     // Strip double separators.
-    for (u32 i = 0; i < (u32)result.len - 1; ++i)
+    for (u32 i = 0; i < (u32)result_len - 1; ++i)
     {
         if (tmp[i] == '/' && tmp[i + 1] == '/')
         {
-            for (u32 j = i; j < (u32)result.len; ++j) tmp[j] = tmp[j + 1];
-            --result.len;
+            for (u32 j = i; j < (u32)result_len; ++j) tmp[j] = tmp[j + 1];
+            --result_len;
             --i;
         }
     }
@@ -176,33 +182,33 @@ static Str PlatformNormalizePath(const char* path)
     // Evaluate any relative specifiers (./).
     if (tmp[0] == '.' && tmp[1] == '/')
     {
-        for (u32 i = 0; i < (u32)result.len - 1; ++i) tmp[i] = tmp[i + 2];
-        result.len -= 2;
+        for (u32 i = 0; i < (u32)result_len - 1; ++i) tmp[i] = tmp[i + 2];
+        result_len -= 2;
     }
-    for (u32 i = 0; i < (u32)result.len - 1; ++i)
+    for (u32 i = 0; i < (u32)result_len - 1; ++i)
     {
         if (tmp[i] != '.' && tmp[i + 1] == '.' && tmp[i + 2] == '/')
         {
             for (u32 j = i + 1; tmp[j + 1]; ++j) tmp[j] = tmp[j + 2];
-            result.len -= 2;
+            result_len -= 2;
         }
     }
     
     // Evaluate any parent specifiers (../).
     u32 last_separator = 0;
-    for (u32 i = 0; (i < (u32)result.len - 1); ++i)
+    for (u32 i = 0; (i < (u32)result_len - 1); ++i)
     {
         if (tmp[i] == '.' && tmp[i + 1] == '.' && tmp[i + 2] == '/')
         {
             u32 base = i + 2;
-            u32 count = result.len - base;
+            u32 count = (u32)result_len - base;
             
             for (u32 j = 0; j <= count; ++j)
             {
                 tmp[last_separator + j] = tmp[base + j];
             }
             
-            result.len -= base - last_separator;
+            result_len -= base - last_separator;
             i = last_separator;
             
             if (i > 0)
@@ -219,8 +225,7 @@ static Str PlatformNormalizePath(const char* path)
                 }
                 if (!has_separator) 
                 {
-                    Str r;
-                    str_init(&r,0,0);
+                    Str r = {};
                     return r;
                 }
             }
@@ -228,7 +233,10 @@ static Str PlatformNormalizePath(const char* path)
         if (i > 0 && tmp[i - 1] == '/') last_separator = i - 1;
     }
     
-    str_free(&exe_path);
+    // Update length of the string
+    StrSetLen(&result, result_len);
+    
+    //StrFree(&exe_path);
     return result;
 }
 

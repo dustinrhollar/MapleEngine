@@ -24,6 +24,46 @@ void PlatformAtomicDec(volatile u32*);
 //------------------------------------------------------------------------------------
 // FILE API 
 
+union FILE_ID
+{
+    struct { u32 offset:24; u32 index:8; };
+    u32 mask;
+};
+
+// A file id is basically a 32bit number
+#define INVALID_FID { 0xFFFFFFFF, 0xFFFFFFFF }
+
+enum class FileType : u8
+{
+    Volume,
+    Directory,
+    Compressed,
+    File,
+    
+    Count,
+    Unknown = Count,
+};
+
+struct PlatformFile
+{
+    Str      physical_name; // abs path,    , ex. "C:\some_dir\maple-merchant\shaders\internal\file.hlsl"
+    Str      relative_name; // rel path,    , ex. "internal\file.hlsl"
+    FileType type;
+    FILE_ID  fid;           // NOTE(Dustin): Does this need to be stored?
+    FILE_ID  parent_fid;    // NOTE(Dustin): Does this need to be stored?
+    FILE_ID *child_fids;    // stb_array
+};
+
+static void          PlatformMountFile(const char *virtual_name, const char *path);
+static FILE_ID       PlatformGetMountFile(const char *virtual_name);
+static PlatformFile* PlatformGetFile(FILE_ID fid);
+
+FORCE_INLINE bool
+PlatformIsValidFid(FILE_ID fid)
+{
+    return fid.mask != 0xFFFFFFFF;
+}
+
 typedef enum 
 {
     // File Errors

@@ -9,6 +9,33 @@
 namespace editor
 {
     //-----------------------------------------------------------------------------------//
+    // Material Icons
+    
+    enum IconType 
+    {
+        Icon_Directory,
+        Icon_File,
+        
+        Icon_LeftArrow,
+        Icon_RightArrow,
+        Icon_UpArrow,
+        
+        Icon_Count,
+        Icon_Unknown = Icon_Count,
+    };
+    
+    TEXTURE_ID g_icons[Icon_Count];
+    
+    //TEXTURE_ID g_file_icon;
+    //TEXTURE_ID g_directory_icon;
+    //TEXTURE_ID g_directory_special_icon;
+    
+    //-----------------------------------------------------------------------------------//
+    // Directory-File Listings
+    
+    FILE_ID current_directory_fid;
+    
+    //-----------------------------------------------------------------------------------//
     // General Input Tracking
     
     enum MouseMask
@@ -65,7 +92,9 @@ namespace editor
     
     //-----------------------------------------------------------------------------------//
     // Options
+    
     static bool               g_show_imgui_metrics = false;
+    static bool               g_show_imgui_demo    = false;
     
     //-----------------------------------------------------------------------------------//
     // Function Pre-decs
@@ -221,6 +250,21 @@ static void editor::Initialize()
     
     command_queue = device::GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
     command_list = command_queue->GetCommandList();
+    
+    //-----------------------------------------------------------------------------------//
+    // Load Material icons
+    
+    g_icons[Icon_File]       = command_list->LoadTextureFromFile("textures/ui_icons/file.png");
+    g_icons[Icon_Directory]  = command_list->LoadTextureFromFile("textures/ui_icons/directory.png");
+    
+    g_icons[Icon_LeftArrow]  = command_list->LoadTextureFromFile("textures/ui_icons/left_arrow.png");
+    g_icons[Icon_RightArrow] = command_list->LoadTextureFromFile("textures/ui_icons/right_arrow.png");
+    g_icons[Icon_UpArrow]    = command_list->LoadTextureFromFile("textures/ui_icons/up_arrow.png");
+    
+    current_directory_fid = PlatformGetMountFile("bin");
+    
+    //-----------------------------------------------------------------------------------//
+    // Run Terrain Sim
     
     g_terrain_sim.scale      = 0.002f;
     g_terrain_sim.seed       = 534864359;
@@ -561,6 +605,18 @@ editor::Render()
                     if (ImGui::MenuItem("Hide Metrics", "Ctrl+M")) 
                         g_show_imgui_metrics = false;
                 }
+                
+                if (!g_show_imgui_demo)
+                {
+                    if (ImGui::MenuItem("Show Demo Window", "Ctrl+M")) 
+                        g_show_imgui_demo = true;
+                }
+                else
+                {
+                    if (ImGui::MenuItem("Hide Demo Window", "Ctrl+M")) 
+                        g_show_imgui_demo = false;
+                }
+                
                 ImGui::EndMenu();
             }
             
@@ -569,15 +625,6 @@ editor::Render()
         
         ImGui::BeginTabBar("TabBar");
         {
-            //-----------------------------------------------------------------------------------//
-            // Terrain Generator Tab
-            
-            if (ImGui::BeginTabItem("Experimental"))
-            {
-                experimental::DrawDocker();
-                ImGui::EndTabItem();
-            }
-            
             //-----------------------------------------------------------------------------------//
             // Main Viewport Tab
             
@@ -695,9 +742,163 @@ editor::Render()
                 ImGui::End();
                 
                 ImGui::Begin("Content Browser");
-                ImGui::Text("Hello, Content Browser!");
+                {
+                    // Styling
+                    ImGuiStyle& style = ImGui::GetStyle();
+                    const ImVec4 window_bg  = style.Colors[ImGuiCol_WindowBg];
+                    const ImVec4 hovered_bg = style.Colors[ImGuiCol_ButtonHovered];
+                    
+                    // Current Directory
+                    PlatformFile* file = PlatformGetFile(current_directory_fid);
+                    
+                    //---------------------------------------------------------------------------//
+                    // Panel Header
+                    
+                    static bool s_up_arrow_hovered = false;
+                    
+                    if (ImGui::ImageButton((ImTextureID)((uptr)g_icons[Icon_UpArrow].val), 
+                                           { 16, 16 }, 
+                                           {  0,  0 }, 
+                                           {  1,  1 }, 0, 
+                                           (s_up_arrow_hovered) ? hovered_bg : window_bg))
+                    {
+                        if (PlatformIsValidFid(file->parent_fid))
+                        {
+                            current_directory_fid = file->parent_fid;
+                            file = PlatformGetFile(current_directory_fid);
+                        }
+                    }
+                    
+                    if (ImGui::IsItemHovered())
+                    {
+                        s_up_arrow_hovered = true;
+                    }
+                    else
+                        s_up_arrow_hovered = false;
+                    
+                    ImGui::SameLine();
+                    
+                    // TODO(Dustin): Implement undo & redo actions
+                    ImVec4 arrow_bg = window_bg;
+                    arrow_bg.w = 0.2f;
+                    
+                    ImGui::ImageButton((ImTextureID)((uptr)g_icons[Icon_LeftArrow].val), 
+                                       { 16, 16 }, 
+                                       {  0,  0 }, 
+                                       {  1,  1 }, 0, 
+                                       window_bg,
+                                       { 1, 1, 1, 0.2f });
+                    ImGui::SameLine();
+                    ImGui::ImageButton((ImTextureID)((uptr)g_icons[Icon_RightArrow].val), {16, 16},
+                                       { 0, 0 }, 
+                                       { 1, 1 }, 0, 
+                                       window_bg,
+                                       { 1, 1, 1, 0.2f });
+                    
+                    ImGui::Separator();
+                    
+                    //---------------------------------------------------------------------------//
+                    // Panel Content
+                    
+                    static i32 hovered_idx = -1;
+                    bool is_item_hovered = false;
+                    
+                    const r32 thumbnail_sz = 64.0f;
+                    const r32 padding = 16.0f;
+                    const r32 cell_sz = thumbnail_sz + padding;
+                    const r32 content_region_x = ImGui::GetContentRegionAvail().x;
+                    i32 column_count = fast_max(1, (i32)(content_region_x / cell_sz));
+                    
+                    ImGui::Columns(column_count, 0, false);
+                    
+                    for (u32 i = 0; i < (u32)arrlen(file->child_fids); ++i)
+                    {
+                        PlatformFile* child_file = PlatformGetFile(file->child_fids[i]);
+                        
+                        // Extract the filename from the relative path...
+                        const char *filename = 0;
+                        {
+                            const char *relative_name = StrGetString(&child_file->relative_name);
+                            u64 len = StrLen(&child_file->relative_name);
+                            
+                            u64 i = 0;
+                            for (i = len; i > 0; --i)
+                            {
+                                if (relative_name[i-1] == '/') 
+                                    break;
+                            }
+                            
+                            filename = relative_name + i;
+                        }
+                        
+                        if (child_file->type == FileType::Directory)
+                        {
+                            ImGui::ImageButton((ImTextureID)((uptr)g_icons[Icon_Directory].val), 
+                                               {thumbnail_sz, thumbnail_sz}, 
+                                               {0, 0}, {1,1}, 0, 
+                                               (i == hovered_idx) ? hovered_bg : window_bg);
+                            
+                            if (ImGui::IsItemHovered())
+                            {
+                                hovered_idx = i;
+                                is_item_hovered = true;
+                                
+                                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                                {
+                                    current_directory_fid = file->child_fids[i];
+                                }
+                            }
+                        }
+                        else
+                        {
+                            ImGui::ImageButton((ImTextureID)((uptr)g_icons[Icon_File].val), {thumbnail_sz, thumbnail_sz}, 
+                                               {0, 0}, {1,1}, 0,
+                                               (i == hovered_idx) ? hovered_bg : window_bg);
+                            
+                            if (ImGui::IsItemHovered())
+                            {
+                                hovered_idx = i;
+                                is_item_hovered = true;
+                            }
+                        }
+                        
+                        if (i == hovered_idx)
+                        {
+                            // Draw hovered background
+                            
+                            r32 spacing_y = style.ItemSpacing.y;
+                            
+                            ImGuiWindow* window = ImGui::GetCurrentWindow();
+                            const float wrap_pos_x = window->DC.TextWrapPos;
+                            const bool wrap_enabled = (wrap_pos_x >= 0.0f);
+                            const float wrap_width = ImGui::CalcWrapWidthForPos(window->DC.CursorPos, wrap_pos_x);
+                            //const float wrap_width = thumbnail_sz;
+                            
+                            ImVec2 text_size = ImGui::CalcTextSize(filename, NULL, false, thumbnail_sz);
+                            text_size.x = thumbnail_sz;
+                            
+                            ImVec2 pos = ImGui::GetCursorScreenPos();
+                            ImVec2 marker_min = ImVec2(pos.x + wrap_width, pos.y - spacing_y);
+                            ImVec2 marker_max = ImVec2(pos.x + text_size.x, 
+                                                       pos.y + text_size.y + (padding/2));
+                            
+                            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                            draw_list->AddRectFilled(marker_min, marker_max, 
+                                                     ImGui::ColorConvertFloat4ToU32(hovered_bg));
+                        }
+                        
+                        ImGui::TextWrapped(filename);
+                        
+                        ImGui::NextColumn();
+                    }
+                    
+                    // Nothing is hovered, so do not 
+                    if (!is_item_hovered)
+                        hovered_idx = -1;
+                    
+                    ImGui::Columns(1);
+                }
                 ImGui::End();
-                
                 
                 DrawMainViewport();
                 
@@ -771,10 +972,23 @@ editor::Render()
             }
             
         }
+        
+        //-----------------------------------------------------------------------------------//
+        // Terrain Generator Tab
+        
+        if (ImGui::BeginTabItem("Experimental"))
+        {
+            experimental::DrawDocker();
+            ImGui::EndTabItem();
+        }
+        
         ImGui::EndTabBar();
         
         if (g_show_imgui_metrics)
             ImGui::ShowMetricsWindow(&g_show_imgui_metrics);
+        
+        if (g_show_imgui_demo)
+            ImGui::ShowDemoWindow(&g_show_imgui_demo);
     }
     ImGui::End(); // TabTest
     

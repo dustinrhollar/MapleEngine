@@ -63,6 +63,14 @@ void PlatformCloseApplication()
     g_is_running = false;
 }
 
+
+static void 
+Win32ReadFileToBuffer_Wrapper(const char* file_path, u8** buffer, int* size)
+{
+    PlatformReadFileToBuffer(file_path, buffer, (u32*)size);
+}
+
+
 INT WINAPI 
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
 {
@@ -71,6 +79,19 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdSh
     
     g_internal_mem = PlatformVirtualAlloc(g_internal_mem_sz);
     SysMemoryInit(g_internal_mem, g_internal_mem_sz);
+    
+    {
+        TomlCallbacks callbacks = {};
+        callbacks.Alloc    = SysMemoryAlloc;
+        callbacks.Free     = SysMemoryRelease;
+        callbacks.LoadFile = Win32ReadFileToBuffer_Wrapper;
+        callbacks.FreeFile = SysMemoryRelease;
+        TomlSetCallbacks(&callbacks);
+    }
+    
+    // initialize file manager
+    file_manager::Init();
+    file_manager::MountFile("bin", "W:/MapleTerrain/bin/debug");
     
     // Create the Root Window
     g_root_wnd = HostWndInit(g_window_width, g_window_height, g_editor_title);
@@ -139,9 +160,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdSh
     Win32ImGuiInit(g_root_wnd);
     d3d_imgui::Initialize(g_swapchain.GetRenderTarget());
     editor::Initialize();
-    
-    // 4. Create a Render Target for the "Game"
-    // TODO(Dustin):
     
     
     // 5. Execution Loop

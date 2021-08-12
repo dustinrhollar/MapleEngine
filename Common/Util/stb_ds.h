@@ -229,6 +229,18 @@ DOCUMENTATION
           Inserts a struct with T.key and T.value into the hashmap. If the struct is already
           present in the hashmap, updates it.
           
+//-------------------------------------------------------------------------------------------------
+// MAPLE - Added
+
+      hmputs_len
+      shputs_len
+        T hmputs_len(T*, T item, size_t key_len)
+        T shputs_len(T*, T item, size_t key_len)
+          Inserts a struct with T.key and T.value into the hashmap. If the struct is already
+          present in the hashmap, updates it.
+          
+//-------------------------------------------------------------------------------------------------
+
       hmdel
       shdel
         int hmdel(T*, TK key)
@@ -384,6 +396,8 @@ CREDITS
 #define sh_new_arena  stbds_sh_new_arena
 #define sh_new_strdup stbds_sh_new_strdup
 
+#define shputs_len  stbds_shputs_len
+
 #define stralloc    stbds_stralloc
 #define strreset    stbds_strreset
 #endif      
@@ -407,6 +421,7 @@ extern "C" {
     // these are the hash functions used internally if you want to test them or use them for other purposes
     extern size_t stbds_hash_bytes(void *p, size_t len, size_t seed);
     extern size_t stbds_hash_string(char *str, size_t seed);
+    extern size_t stbds_hash_string_by_len(char *str, size_t len, size_t seed);
     
     // this is a simple string arena allocator, initialize with e.g. 'stbds_string_arena my_arena={0}'.
     typedef struct stbds_string_arena stbds_string_arena;
@@ -486,16 +501,16 @@ extern "C" {
 
 #define stbds_hmput(t, k, v) \
 ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, 0),   \
- (t)[stbds_temp((t)-1)].key = (k), \
- (t)[stbds_temp((t)-1)].value = (v))
+(t)[stbds_temp((t)-1)].key = (k), \
+(t)[stbds_temp((t)-1)].value = (v))
 
 #define stbds_hmputs(t, s) \
 ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), &(s).key, sizeof (s).key, STBDS_HM_BINARY), \
- (t)[stbds_temp((t)-1)] = (s))
+(t)[stbds_temp((t)-1)] = (s))
 
 #define stbds_hmgeti(t,k) \
 ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_HM_BINARY), \
- stbds_temp((t)-1))
+stbds_temp((t)-1))
 
 #define stbds_hmgetp(t, k) \
 ((void) stbds_hmgeti(t,k), &(t)[stbds_temp((t)-1)])
@@ -519,15 +534,24 @@ extern "C" {
 
 #define stbds_shput(t, k, v) \
 ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
- (t)[stbds_temp(t-1)].value = (v))
+(t)[stbds_temp(t-1)].value = (v))
 
 #define stbds_shputs(t, s) \
 ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (s).key, sizeof (s).key, STBDS_HM_STRING), \
- (t)[stbds_temp(t-1)] = (s))
+(t)[stbds_temp(t-1)] = (s))
+
+//-------------------------------------------------------------------------------------------------
+// MAPLE - Added
+
+#define stbds_shputs_len(t, s, l) \
+((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (s).key, (l), STBDS_HM_STRING_LEN), \
+(t)[stbds_temp(t-1)].value = (s).value)
+
+//-------------------------------------------------------------------------------------------------
 
 #define stbds_shgeti(t,k) \
 ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
- stbds_temp(t))
+stbds_temp(t))
 
 #define stbds_shgetp(t, k) \
 ((void) stbds_shgeti(t,k), &(t)[stbds_temp(t-1)])
@@ -576,6 +600,7 @@ enum
 {
     STBDS_HM_BINARY,
     STBDS_HM_STRING,
+    STBDS_HM_STRING_LEN,
 };
 
 enum
@@ -906,6 +931,23 @@ size_t stbds_hash_string(char *str, size_t seed)
     return hash+seed;
 }
 
+size_t stbds_hash_string_by_len(char *str, size_t len, size_t seed)
+{
+    size_t hash = seed;
+    for (size_t i = 0; i < len; ++i)
+        hash = STBDS_ROTATE_LEFT(hash, 9) + (unsigned char) str[i];
+    
+    // Thomas Wang 64-to-32 bit mix function, hopefully also works in 32 bits
+    hash ^= seed;
+    hash = (~hash) + (hash << 18);
+    hash ^= hash ^ STBDS_ROTATE_RIGHT(hash,31);
+    hash = hash * 21;
+    hash ^= hash ^ STBDS_ROTATE_RIGHT(hash,11);
+    hash += (hash << 6);
+    hash ^= STBDS_ROTATE_RIGHT(hash,22);
+    return hash+seed;
+}
+
 #ifdef STBDS_SIPHASH_2_4
 #define STBDS_SIPHASH_C_ROUNDS 2
 #define STBDS_SIPHASH_D_ROUNDS 4
@@ -942,14 +984,14 @@ static size_t stbds_siphash_bytes(void *p, size_t len, size_t seed)
 #endif
     
 #define STBDS_SIPROUND() \
-    do {                   \
-        v0 += v1; v1 = STBDS_ROTATE_LEFT(v1, 13);  v1 ^= v0; v0 = STBDS_ROTATE_LEFT(v0,STBDS_SIZE_T_BITS/2); \
-        v2 += v3; v3 = STBDS_ROTATE_LEFT(v3, 16);  v3 ^= v2;                                                 \
-        v2 += v1; v1 = STBDS_ROTATE_LEFT(v1, 17);  v1 ^= v2; v2 = STBDS_ROTATE_LEFT(v2,STBDS_SIZE_T_BITS/2); \
-        v0 += v3; v3 = STBDS_ROTATE_LEFT(v3, 21);  v3 ^= v0;                                                 \
-    } while (0)
-        
-        for (i=0; i+sizeof(size_t) <= len; i += sizeof(size_t), d += sizeof(size_t)) {
+do {                   \
+v0 += v1; v1 = STBDS_ROTATE_LEFT(v1, 13);  v1 ^= v0; v0 = STBDS_ROTATE_LEFT(v0,STBDS_SIZE_T_BITS/2); \
+v2 += v3; v3 = STBDS_ROTATE_LEFT(v3, 16);  v3 ^= v2;                                                 \
+v2 += v1; v1 = STBDS_ROTATE_LEFT(v1, 17);  v1 ^= v2; v2 = STBDS_ROTATE_LEFT(v2,STBDS_SIZE_T_BITS/2); \
+v0 += v3; v3 = STBDS_ROTATE_LEFT(v3, 21);  v3 ^= v0;                                                 \
+} while (0)
+    
+    for (i=0; i+sizeof(size_t) <= len; i += sizeof(size_t), d += sizeof(size_t)) {
         data = d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
         data |= (size_t) (d[4] | (d[5] << 8) | (d[6] << 16) | (d[7] << 24)) << 16 << 16; // discarded if size_t == 4
         
@@ -1191,6 +1233,7 @@ void * stbds_hmput_default(void *a, size_t elemsize)
 }
 
 static char *stbds_strdup(char *str);
+static char *stbds_strdup_by_len(char *str, size_t len);
 
 void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int mode)
 {
@@ -1226,7 +1269,16 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
     
     // we iterate hash table explicitly because we want to track if we saw a tombstone
     {
-        size_t hash = mode >= STBDS_HM_STRING ? stbds_hash_string((char*)key,table->seed) : stbds_hash_bytes(key, keysize,table->seed);
+        size_t hash;
+        if (mode == STBDS_HM_STRING)
+            hash = stbds_hash_string((char*)key,table->seed);
+        else if (mode >= STBDS_HM_STRING_LEN)
+            hash = stbds_hash_string_by_len((char*)key, keysize, table->seed);
+        else
+            hash = stbds_hash_bytes(key, keysize,table->seed);
+        
+        //size_t hash = mode >= STBDS_HM_STRING ? stbds_hash_string((char*)key,table->seed) : stbds_hash_bytes(key, keysize,table->seed);
+        
         size_t step = STBDS_BUCKET_LENGTH;
         size_t limit,i;
         size_t pos;
@@ -1302,7 +1354,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
             stbds_temp(a) = i-1;
             
             switch (table->string.mode) {
-                case STBDS_SH_STRDUP: *(char **) ((char *) a + elemsize*i) = stbds_strdup((char*) key); break;
+                case STBDS_SH_STRDUP: *(char **) ((char *) a + elemsize*i) = (mode == STBDS_HM_STRING) ? stbds_strdup((char*) key) : stbds_strdup_by_len((char*) key, keysize); break;
                 case STBDS_SH_ARENA:  *(char **) ((char *) a + elemsize*i) = stbds_stralloc(&table->string, (char*)key); break;
                 default:              *(char **) ((char *) a + elemsize*i) = (char *) key; break;
             }
@@ -1395,11 +1447,28 @@ static char *stbds_strdup(char *str)
 {
     // to keep replaceable allocator simple, we don't want to use strdup.
     // rolling our own also avoids problem of strdup vs _strdup
-    size_t len = strlen(str)+1;
+    size_t len = strlen(str);
+#if 0
     char *p = (char*) STBDS_REALLOC(NULL, 0, len);
     memmove(p, str, len);
     return p;
+#else
+    return stbds_strdup_by_len(str, len);
+#endif
+    
 }
+
+static char *stbds_strdup_by_len(char *str, size_t len)
+{
+    // to keep replaceable allocator simple, we don't want to use strdup.
+    // rolling our own also avoids problem of strdup vs _strdup
+    char *p = (char*) STBDS_REALLOC(NULL, 0, len+1);
+    memmove(p, str, len);
+    p[len] = 0;
+    return p;
+}
+
+
 
 #ifndef STBDS_STRING_ARENA_BLOCKSIZE_MIN
 #define STBDS_STRING_ARENA_BLOCKSIZE_MIN  512

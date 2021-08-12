@@ -131,18 +131,11 @@ PlatformGuidToString(MAPLE_GUID guid)
                        guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
                        guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
     
-    Str result;
-    str_init(&result, 0, 0);
-    str_set_cap(&result, req);
-    
-    req = snprintf(str_to_string(&result), req, "%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX", 
+    Str result = StrInit(req);
+    req = snprintf(StrGetString(&result), req, "%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX", 
                    guid.Data1, guid.Data2, guid.Data3, 
                    guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
                    guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
-    
-    char *s = str_to_string(&result);
-    s[req] = 0;
-    result.len = req;
     
     return result;
 }
