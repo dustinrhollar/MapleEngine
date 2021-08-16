@@ -214,7 +214,7 @@ experimental::KeyPressCallback(input_layer::Event event, void *args)
     return false;
 }
 
-static bool 
+static bool
 experimental::KeyReleaseCallback(input_layer::Event event, void *args)
 {
     ViewportCamera *camera = g_scene_list[g_active_scene_idx].GetViewportCamera();
@@ -225,7 +225,7 @@ experimental::KeyReleaseCallback(input_layer::Event event, void *args)
     return false;
 }
 
-static bool 
+static bool
 experimental::ButtonPressCallback(input_layer::Event event, void *args)
 {
     ViewportCamera *camera = g_scene_list[g_active_scene_idx].GetViewportCamera();
@@ -236,7 +236,7 @@ experimental::ButtonPressCallback(input_layer::Event event, void *args)
     return false;
 }
 
-static bool 
+static bool
 experimental::ButtonReleaseCallback(input_layer::Event event, void *args)
 {
     ViewportCamera *camera = g_scene_list[g_active_scene_idx].GetViewportCamera();

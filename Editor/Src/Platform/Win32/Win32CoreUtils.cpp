@@ -6,6 +6,9 @@ struct Win32ProcessorInfo
     DWORD thread_per_processor = 0;
 };
 
+static bool       g_win32_invalid_guid_first_time = true;
+static MAPLE_GUID g_win32_invalid_guid;
+
 void 
 Win32GetProcessorInfo(Win32ProcessorInfo *info)
 {
@@ -115,7 +118,7 @@ PlatformAtomicDec(volatile u32* v)
     _InterlockedDecrement(v);
 }
 
-MAPLE_GUID 
+static MAPLE_GUID 
 PlatformGenerateGuid()
 {
     GUID result;
@@ -123,7 +126,39 @@ PlatformGenerateGuid()
     return result;
 }
 
-Str 
+static bool
+PlatformGuidCmp(MAPLE_GUID *left, MAPLE_GUID *right)
+{
+    u128 *uleft  = (u128*)left;
+    u128 *uright = (u128*)right;
+    return uleft->Bits[0] == uright->Bits[0]
+        && uleft->Bits[1] == uright->Bits[1];
+}
+
+static bool 
+PlatformIsGuidValid(MAPLE_GUID guid)
+{
+    if (g_win32_invalid_guid_first_time)
+    {
+        g_win32_invalid_guid_first_time = false;
+        g_win32_invalid_guid = PlatformGenerateGuid();
+    }
+    return PlatformGuidCmp(&guid, &g_win32_invalid_guid);
+}
+
+static MAPLE_GUID 
+PlatformGetInvalidGuid()
+{
+    if (g_win32_invalid_guid_first_time)
+    {
+        g_win32_invalid_guid_first_time = false;
+        g_win32_invalid_guid = PlatformGenerateGuid();
+    }
+    return g_win32_invalid_guid;
+}
+
+
+static Str 
 PlatformGuidToString(MAPLE_GUID guid)
 {
     i32 req = snprintf(NULL, 0, "%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX", 
@@ -140,7 +175,7 @@ PlatformGuidToString(MAPLE_GUID guid)
     return result;
 }
 
-MAPLE_GUID 
+static MAPLE_GUID 
 PlatformStringToGuid(const char* guid_str)
 {
     MAPLE_GUID result;

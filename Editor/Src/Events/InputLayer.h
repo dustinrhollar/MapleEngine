@@ -193,7 +193,7 @@ namespace input_layer
         }
         
         // Return true if the event should not be propagated to the next layer
-        // Return fakle if the event should be propagated to the next layer
+        // Return false if the event should be propagated to the next layer
         bool DispatchEvent(Event event)
         {
             for (u32 i = 0; i < arrlen(_listeners[event.type]); ++i) 

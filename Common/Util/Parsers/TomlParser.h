@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 // TODO(Dustin): 
+// - (BUG) Spaces should be allowed in object names 
 // - (Inline) Table support
 // - (MAYBE) - custom array and hashtable to remove stb_ds as a depedency
 
@@ -112,6 +113,7 @@ static TomlObject  TomlCreateObject();
 static TomlData    TomlDataInt(int val);
 static TomlData    TomlDataBool(bool val);
 static TomlData    TomlDataFloat(float val);
+// NOTE(Dustin): Shoulds strings be copied to internal storage?
 static TomlData    TomlDataString(char *str, int len);
 static TomlData    TomlDataArray();
 

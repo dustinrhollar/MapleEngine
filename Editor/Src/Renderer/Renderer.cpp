@@ -116,9 +116,9 @@ RendererFree()
     device::Flush();
     
     g_swapchain.Free();
-    device::FreeDevice();
     FreeGlobalResourceState();
     
+    device::FreeDevice();
     device::ReportLiveObjects();
 }
 

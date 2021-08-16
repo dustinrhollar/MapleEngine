@@ -50,6 +50,8 @@ static void  StrSetLen(Str *str, u64 len);
 static u64   StrLen(Str *str);
 static Str   StrAdd(Str *left, Str *right);
 static Str   StrAdd(Str *left, const char *right_ptr, u64 right_len);
+static int   StrCmp(Str *left, Str *right);
+static int   StrCmp(Str *left, const char *right);
 
 void char8_to_char16(char16_t *out, char *in);
 

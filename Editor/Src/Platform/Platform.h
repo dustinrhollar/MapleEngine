@@ -117,4 +117,27 @@ u32 PlatformClz(u32 v);
 u32 PlatformCtzl(u64 v); 
 u32 PlatformClzl(u64 v); 
 
+//------------------------------------------------------------------------------------
+// GUID API
+
+static MAPLE_GUID PlatformGenerateGuid();
+static bool       PlatformGuidCmp(MAPLE_GUID *left, MAPLE_GUID *right);
+static Str        PlatformGuidToString(MAPLE_GUID guid);
+static MAPLE_GUID PlatformStringToGuid(const char* guid_str);
+// 
+// Compares against a global runtime value for GUIDs. This is not guarenteed to 
+// be the same across multiple instances of a program. The invalid GUID is initialized
+// on first call to this function or the first call to PlatformGetInvalidGuid, depending
+// on which is called first.
+//
+static bool       PlatformIsGuidValid(MAPLE_GUID guid);
+//
+// The invalid GUID is initialized on first call to this function or the first call to 
+// PlatformIsGuidValid, depending on which is called first. If you plan on utilizing 
+// the invalid guid , it is recommended that you call this function before intializing 
+// any other GUIDs. The invalid guid is not synchronized across threads, so it must be 
+// initialized before work using GUIDs can be executed async.
+//
+static MAPLE_GUID PlatformGetInvalidGuid();
+
 #endif //_PLATFORM_H

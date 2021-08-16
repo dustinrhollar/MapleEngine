@@ -10,40 +10,18 @@ static void            *g_internal_mem    = 0;
 static bool             g_needs_resize = false;
 static WND_ID           g_root_wnd = INVALID_WND_ID;
 
-#if 0
-
-struct Win32Library
+// Startup information
+struct MapleProject
 {
-    HMODULE handle;
-    // TODO(Dustin): Time information
+    Str name;
+    Str filepath;
+    // TODO(Dustin): Icon
 };
 
-static const char  *g_engine_lib_name = "Engine.dll";
-static Win32Library g_library;
-
-file_global Win32Library g_lib_renderer = {};
-file_global const char *g_renderer_lib_name = "Renderer.dll";
-
-static void 
-Win32LoadLibrary(Win32Library *library, const char *libname)
-{
-    HMODULE handle = LoadLibraryA(libname);
-    assert(handle != NULL);
-    library->handle = handle;
-}
-
-static void 
-LoadModules()
-{
-    Win32LoadLibrary(&g_library, g_engine_lib_name);
-    maple::LoadGlobalFunctions(g_library.handle);
-    
-    Win32LoadLibrary(&g_lib_renderer, g_renderer_lib_name);
-    samara::LoadGlobalFunctions(g_lib_renderer.handle);
-}
-
-
-#endif
+static const char   *g_engine_startup_file = "startup.toml";
+static Str           g_engine_content_dir;
+static MapleProject *g_known_projects;
+static u32           g_active_project;
 
 void KeyPressCallback(MapleKey key)
 {
@@ -63,6 +41,51 @@ void PlatformCloseApplication()
     g_is_running = false;
 }
 
+static void 
+LoadProjectFile(MapleProject *project)
+{
+    const char *filename = "/maple.project";
+    Str project_path = StrAdd(&project->filepath, filename, strlen(filename));
+    
+    Toml toml;
+    TomlResult result = TomlLoad(&toml, StrGetString(&project_path));
+    Assert(result == TomlResult_Success);
+    
+    project->name = StrInit(strlen(toml.title), toml.title);
+    
+    TomlFree(&toml);
+    StrFree(&project_path);
+}
+
+static void
+LoadStartupFile(const char *startup)
+{
+    Toml toml;
+    TomlResult result = TomlLoad(&toml, startup);
+    Assert(result == TomlResult_Success);
+    
+    TomlObject obj = TomlGetObject(&toml, "EngineStartup");
+    
+    g_engine_content_dir = StrInit(TomlGetStringLen(&obj, "engine_assets"), 
+                                   TomlGetString(&obj, "engine_assets"));
+    
+    TomlData* proj_array = TomlGetArray(&obj, "known_projects");
+    int len = TomlGetArrayLen(proj_array);
+    for (int i = 0; i < len; ++i)
+    {
+        MapleProject project = {};
+        project.filepath = StrInit(TomlGetStringLenArrayElem(proj_array, i), 
+                                   TomlGetStringArrayElem(proj_array, i));
+        
+        LoadProjectFile(&project);
+        
+        arrput(g_known_projects, project);
+    }
+    
+    g_active_project = TomlGetInt(&obj, "last_active_project");
+    
+    TomlFree(&toml);
+}
 
 static void 
 Win32ReadFileToBuffer_Wrapper(const char* file_path, u8** buffer, int* size)
@@ -76,6 +99,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdSh
 {
     PlatformLoggerInit();
     GlobalTimerSetup();
+    PlatformGetInvalidGuid(); // init the global invalid guid
     
     g_internal_mem = PlatformVirtualAlloc(g_internal_mem_sz);
     SysMemoryInit(g_internal_mem, g_internal_mem_sz);
@@ -89,12 +113,15 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdSh
         TomlSetCallbacks(&callbacks);
     }
     
+    LoadStartupFile(g_engine_startup_file);
+    
     // initialize file manager
     file_manager::Init();
-    file_manager::MountFile("bin", "W:/MapleTerrain/bin/debug");
+    file_manager::MountFile("engine",  StrGetString(&g_engine_content_dir));
+    file_manager::MountFile("project", StrGetString(&g_known_projects[g_active_project].filepath));
     
     // Create the Root Window
-    g_root_wnd = HostWndInit(g_window_width, g_window_height, g_editor_title);
+    g_root_wnd = HostWndInit(g_window_width, g_window_height, StrGetString(&g_known_projects[g_active_project].name));
     // the root window should forward all events to ImGui proc handler before 
     // dispatching events to other systems
     HostWndAttachListener(g_root_wnd, input_layer::Layer_ImGui, input_layer::Event_AllEvents, Win32ImGuiWndProcHandler);

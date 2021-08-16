@@ -317,7 +317,7 @@ TomlScanFile(TomlScanner *scanner)
             lex.start = iter;
             { // consume the identifier
                 do { ++iter; } 
-                while (iter[0] != '\n');
+                while (iter < scanner->end && iter[0] != '\n');
             }
             lex.len = (int)(iter - lex.start);
         }

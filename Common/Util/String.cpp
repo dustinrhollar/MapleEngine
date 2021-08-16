@@ -255,6 +255,18 @@ StrAdd(Str *left, const char *right_ptr, u64 right_len)
     return result;
 }
 
+static int  
+StrCmp(Str *left, Str *right)
+{
+    return strcmp(StrGetString(left), StrGetString(right)); 
+}
+
+static int   
+StrCmp(Str *left, const char *right)
+{
+    return strcmp(StrGetString(left), right); 
+}
+
 // UTF-16 IMPLEMENTATIONS...
 
 int str_size_from_leading(char16_t c)
