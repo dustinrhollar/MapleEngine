@@ -38,7 +38,7 @@ Rendering
 - [ ] Shadow mapping support
 - [ ] IBL & GI support 
 
-Terrain Generation
+Procedural System
 - [x] Basic Editor supporting Node Graph and Terrain Generation
 - [x] Viewport Camera controls
 - [x] Triangle Strip mesh generation
@@ -48,11 +48,19 @@ Terrain Generation
 - [ ] Node Graph system for terrain generation
 - [ ] Material editor
 
+GUI
+- [x] Custom Window Interface
+- [x] Content Browser 
+- [ ] Integrate Experimental Viewports into the new Window Interface
+- [ ] Rework tab bar for windows
+- [ ] Proper UI input handling
+
 Engine
 - [ ] Preprocessor for Code Gen (in development)
 - [ ] DLLs for Editor, Engine, and projects
 - [ ] Rework central allocator for memory management
 - [ ] Multithreading (Thread Pool, Fibers)
+- [ ] Entity System
 
 Asset Pipeline 
 - [x] Win32 File Manager
