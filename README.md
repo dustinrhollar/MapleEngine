@@ -1,8 +1,8 @@
-# Maple Terrain
+# Maple Engine
 
 ## About
 
-Maple terrain is an in-development terrain editor whose focus is on providing a variety of tools for generating and developing large landscapes. 
+Maple engine is an in-development game engine whose focus is on providing a variety of tools for learning graphics and game engines. 
 
 ## Compiling
 
