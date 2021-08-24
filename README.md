@@ -49,7 +49,7 @@ Terrain Generation
 - [ ] Material editor
 
 Engine
-- [-] Preprocessor for Code Gen (in development)
+- [ ] Preprocessor for Code Gen (in development)
 - [ ] DLLs for Editor, Engine, and projects
 - [ ] Rework central allocator for memory management
 - [ ] Multithreading (Thread Pool, Fibers)
