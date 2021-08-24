@@ -48,8 +48,14 @@ Terrain Generation
 - [ ] Node Graph system for terrain generation
 - [ ] Material editor
 
+Engine
+- [-] Preprocessor for Code Gen (in development)
+- [ ] DLLs for Editor, Engine, and projects
+- [ ] Rework central allocator for memory management
+- [ ] Multithreading (Thread Pool, Fibers)
+
 Asset Pipeline 
-- [ ] Win32 File Manager
+- [x] Win32 File Manager
 - [ ] Asset Manager
 - [ ] Terrain file format
 - [ ] Scene file format + generator
