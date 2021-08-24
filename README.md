@@ -72,10 +72,10 @@ Asset Pipeline
 ## Showcase
 
 ### Viewport for Procedural Terrain
-![Main](https://github.com/dustinrhollar/MapleTerrain/blob/main/data/showcase/main_viewport.PNG)
+![Main](https://github.com/dustinrhollar/MapleTerrain/blob/main/data/showcase/proc_terrain.PNG)
 
 ### Secondary Viewport for Terrain Generation
-![Secondary](https://github.com/dustinrhollar/MapleTerrain/blob/main/data/showcase/node_editor.PNG)
+![Secondary](https://github.com/dustinrhollar/MapleTerrain/blob/main/data/showcase/main_viewport.PNG)
 
 ### Experimental Viewport for testing new graphics features 
 
