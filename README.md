@@ -42,18 +42,16 @@ Procedural System
 - [x] Basic Editor supporting Node Graph and Terrain Generation
 - [x] Viewport Camera controls
 - [x] Triangle Strip mesh generation
-- [ ] Alternative mesh generation approaches (Low poly, Geo Clipping, TIN) 
 - [x] Compute support for Perlin and Simplex noise algorithms
 - [ ] Compute support for other noise algorithms (Worley, Turbulence, etc.)
-- [ ] Node Graph system for terrain generation
-- [ ] Material editor
+- [ ] Alternative mesh generation approaches (Low poly, Geo Clipping, TIN) 
 
 GUI
 - [x] Custom Window Interface
 - [x] Content Browser 
 - [ ] Integrate Experimental Viewports into the new Window Interface
-- [ ] Rework tab bar for windows
-- [ ] Proper UI input handling
+- [ ] Node Graph system for terrain generation
+- [ ] Material editor
 
 Engine
 - [ ] Preprocessor for Code Gen (in development)
