@@ -34,9 +34,11 @@ Rendering
 - [x] Base Rendering Architecture
 - [x] ImGui Platform & Rendering Layer
 - [x] Experimental Window for graphics testing
-- [x] PBR support 
+- [x] Diffuse IBL and Cubemapping support 
 - [ ] Shadow mapping support
-- [ ] IBL & GI support 
+- [ ] Support DDS File format
+- [ ] Pre-compute & save mips and cubemaps as DDS files
+- [ ] Specular IBL & GI support 
 
 Procedural System
 - [x] Basic Editor supporting Node Graph and Terrain Generation
