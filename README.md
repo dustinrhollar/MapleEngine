@@ -6,8 +6,8 @@ Maple engine is an in-development game engine whose focus is on providing a vari
 
 ## Compiling
 
-Maple Terrain only supports Windows with D3D12. This application has the following dependencies that will have to be setup on the user's machine before compiling this application:
-1. A version of at least Visual Studio 10 installed in order to use the `cl` command line suite of tools. The setup script for initializing these tools can be found in `scripts/setup_cl.bat`. You will only need to open this file if the your path to Visual Studio is different than the path in the script. 
+Maple Engine supports Windows with D3D12. This application has the following dependencies that will have to be setup on the user's machine before compiling this application:
+1. A version of at least Visual Studio 10 installed in order to use the `cl` command line suite of tools. The setup script for initializing these tools can be found in `scripts/setup_cl.bat`. You will only need to open this file if the path to your Visual Studio install is different than the path in the script. 
 2. CMAKE for compiling IMGUI
 3. [FXC](https://docs.microsoft.com/en-us/windows/win32/direct3dtools/fxc) for compiling shaders. 
 
