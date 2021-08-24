@@ -1,0 +1,27 @@
+
+@(Serialize, Print)
+struct Zoo
+{
+	int64_t i64val;
+	@(NoPrint, NoSerialize)
+	Foo     foo;
+	Goo     goo;
+};
+
+@Meta
+struct MetaTag
+{
+	uint64_t test;
+	float str;
+};
+
+@Meta
+struct NestedTest
+{
+	float dub;
+	struct InternalThingy
+	{
+		uint8_t i8_test;
+		int     itest;
+	} thingy;
+};

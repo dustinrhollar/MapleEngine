@@ -1,0 +1,8 @@
+@Serialize
+struct Foo
+{
+	@NoSerialize
+	int    ival;
+	float  fval;
+	double dval;
+};

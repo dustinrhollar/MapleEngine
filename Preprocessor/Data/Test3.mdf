@@ -1,0 +1,10 @@
+
+@(Serialize)
+@Print
+struct Woo
+{
+	int64_t i64val;
+	@NoSerialize
+	Foo     foo;
+	@(NoPrint) Goo goo;
+};

@@ -1,0 +1,14 @@
+
+@(Print)
+struct Goo
+{
+	int8_t   i8val;
+	@(NoPrint)
+	uint32_t u32val;
+};
+
+struct Too
+{
+	Goo g;
+	int32_t i32_t;
+};

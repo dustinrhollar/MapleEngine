@@ -1,0 +1,39 @@
+@Meta
+struct MegaNest
+{
+	struct LevelA
+	{
+		struct LevelB
+		{
+			struct LevelC
+			{
+				int32_t i32_type;
+				
+				@NoMeta
+				struct 
+				{
+					struct cool
+					{
+						int64_t yoyoy;
+					} c;
+					
+					uint64_t u64_t;
+				} no_name;
+				
+				struct LevelD
+				{
+					float f;
+				} dd;
+				
+				double der;
+				
+				@NoMeta
+				struct
+				{
+					int8_t i8;
+				} ee;
+			} cc;
+		} bb;
+	};
+	LevelA aa;
+};

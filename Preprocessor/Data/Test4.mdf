@@ -1,0 +1,35 @@
+@Meta
+struct A
+{
+	struct B 
+	{
+		int t;
+		int t2;
+	};
+	
+	struct C
+	{
+		struct D {
+			double d;
+			float f;
+		} zgdsfjkhl;
+	} q;
+	
+	B tt;
+	C cc;
+};
+
+@Meta
+struct Q
+{
+	struct W
+	{
+		uint8_t ut;
+	} w;
+	
+	@NoMeta
+	struct 
+	{
+		float f5;
+	} no_name_struct;
+};
