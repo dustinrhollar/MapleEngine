@@ -71,7 +71,7 @@ Asset Pipeline
 
 ## Showcase
 
-### Viewport for Prcedural Terrain
+### Viewport for Procedural Terrain
 ![Main](https://github.com/dustinrhollar/MapleTerrain/blob/main/data/showcase/main_viewport.PNG)
 
 ### Secondary Viewport for Terrain Generation
